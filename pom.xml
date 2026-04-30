@@ -11,6 +11,10 @@
 	<groupId>com.LoyaltyEngine</groupId>
 	<artifactId>LoyaltyEngine</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<modules>
+		<module>transactionService</module>
+	</modules>
 	<name/>
 	<description/>
 	<url/>
