@@ -1,7 +1,7 @@
-package com.LoyaltyEngine.TransactionService.entity.interfaces;
+package com.LoyaltyEngine.TransactionService.services.interfaces;
 
-import com.LoyaltyEngine.TransactionService.domain.TransactionDomain;
-import com.LoyaltyEngine.TransactionService.entity.Transaction;
+import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
+import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
 import org.mapstruct.Mapper;
 
 @Mapper

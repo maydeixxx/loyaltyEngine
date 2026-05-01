@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.TransactionService.entity;
+package com.LoyaltyEngine.TransactionService.models.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
