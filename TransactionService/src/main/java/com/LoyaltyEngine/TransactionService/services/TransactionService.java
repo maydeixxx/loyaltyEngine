@@ -2,10 +2,13 @@ package com.LoyaltyEngine.TransactionService.services;
 
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
-import com.LoyaltyEngine.TransactionService.models.entity.Status;
+import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
+import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreated;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -17,6 +20,7 @@ import java.util.UUID;
 public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
+    private final KafkaTemplate<UUID, TransactionCreated> transactionCreatedKafkaTemplate;
 
     public void createTransaction(Long userId, BigDecimal amount) {
         TransactionDomain newTransaction = TransactionDomain.builder()
@@ -26,7 +30,14 @@ public class TransactionService {
                 .status(Status.NEW)
                 .build();
 
-        transactionRepository.save(transactionMapper.transactionDomainToEntity(newTransaction));
+        TransactionCreated transactionCreated = TransactionCreated.builder()
+                .userId(userId)
+                .amount(amount)
+                .createdAt(newTransaction.getCreatedAt())
+                .build();
+
+        Transaction savedTransaction = transactionRepository.save(transactionMapper.transactionDomainToEntity(newTransaction));
+        transactionCreatedKafkaTemplate.send("transaction_created", savedTransaction.getId(), transactionCreated);
     }
 
     public TransactionDomain getTransactionById(UUID id) {

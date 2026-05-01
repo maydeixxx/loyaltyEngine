@@ -1,5 +1,6 @@
 package com.LoyaltyEngine.TransactionService.models.entity;
 
+import com.LoyaltyEngine.TransactionService.models.domain.Status;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;

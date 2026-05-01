@@ -1,6 +1,5 @@
 package com.LoyaltyEngine.TransactionService.models.domain;
 
-import com.LoyaltyEngine.TransactionService.models.entity.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
