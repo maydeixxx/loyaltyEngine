@@ -1,21 +1,14 @@
-package com.LoyaltyEngine.TransactionService.models.entity;
+package com.LoyaltyEngine.TransactionService.models.dto;
 
 import com.LoyaltyEngine.TransactionService.models.domain.Status;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
 @Data
-public class Transaction {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+public class TransactionDTO {
     private UUID id;
     private Long userId;
     private UUID idempotencyKey;
