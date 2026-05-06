@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.TransactionService.api;
 
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionCreatingException;
+import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.dto.CreateTransaction;
 import com.LoyaltyEngine.TransactionService.models.dto.TransactionDTO;
 import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,6 +42,18 @@ public class TransactionController {
             log.error(String.valueOf(e.getCause()));
             return ResponseEntity.badRequest().body(String.format("Ошибка при создании транзакции: %s", e.getMessage()));
         }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getTransactionsByUserId(@PathVariable Long userId) {
+        List<TransactionDomain> transactions = transactionService.getTransactionByUserId(userId);
+        return ResponseEntity.ok(transactions.stream().map(transactionMapper::transactionDomainToDTO).toList());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTransactionById(@PathVariable UUID id) {
+        TransactionDomain transactionById = transactionService.getTransactionById(id);
+        return ResponseEntity.ok(transactionMapper.transactionDomainToDTO(transactionById));
     }
 
 }

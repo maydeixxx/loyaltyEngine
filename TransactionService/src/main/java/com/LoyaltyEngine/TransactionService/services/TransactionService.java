@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -62,5 +64,17 @@ public class TransactionService {
 
     public Optional<Transaction> getTransactionByIdempotencyKey(UUID idempotencyKey) {
         return transactionRepository.getTransactionByIdempotencyKey(idempotencyKey);
+    }
+
+    public List<TransactionDomain> getTransactionByUserId(Long id) {
+        try {
+            List<Transaction> transactions = transactionRepository.getTransactionsByUserId(id);
+            return transactions
+                    .stream()
+                    .map(transactionMapper::transactionEntityToDomain)
+                    .toList();
+        } catch (DataException e) {
+            throw new TransactionRepositoryException("Ошибка при получении транзакций");
+        }
     }
 }
