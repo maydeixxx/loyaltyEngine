@@ -1,9 +1,9 @@
 package com.LoyaltyEngine.TransactionService.services;
 
+import com.LoyaltyEngine.TransactionService.exceptions.TransactionKafkaException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
-import com.LoyaltyEngine.TransactionService.models.domain.Status;
 import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreated;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
@@ -13,9 +13,9 @@ import org.hibernate.exception.DataException;
 import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,15 +27,14 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final KafkaTemplate<UUID, TransactionCreated> transactionCreatedKafkaTemplate;
 
+    @Transactional
     public TransactionDomain createTransaction(Long userId, BigDecimal amount, UUID idempotencyKey) {
-        TransactionDomain newTransaction = TransactionDomain.builder()
-                .createdAt(LocalDateTime.now())
-                .idempotencyKey(idempotencyKey)
-                .userId(userId)
-                .amount(amount)
-                .status(Status.NEW)
-                .build();
+        Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
+        if (transactionByIdempotencyKey.isPresent()) {
+            return transactionByIdempotencyKey.get();
+        }
 
+        TransactionDomain newTransaction = TransactionDomain.create(userId, amount, idempotencyKey);
         TransactionCreated transactionCreated = TransactionCreated.builder()
                 .userId(userId)
                 .amount(amount)
@@ -47,9 +46,9 @@ public class TransactionService {
             transactionCreatedKafkaTemplate.send("transaction_created", savedTransaction.getId(), transactionCreated);
             return transactionMapper.transactionEntityToDomain(savedTransaction);
         } catch (DataException e) {
-            throw new TransactionRepositoryException("Ошибка при сохранении транзакции");
+            throw new TransactionRepositoryException("Ошибка при сохранении транзакции", e);
         } catch (KafkaException e) {
-            throw new KafkaException("Ошибка при отправке новой транзакции в топик transaction_created: " + e.getMessage());
+            throw new TransactionKafkaException("Ошибка при отправке новой транзакции в топик transaction_created: " + e.getMessage());
         }
     }
 
@@ -61,8 +60,12 @@ public class TransactionService {
                 );
     }
 
-    public Optional<Transaction> getTransactionByIdempotencyKey(UUID idempotencyKey) {
-        return transactionRepository.getTransactionByIdempotencyKey(idempotencyKey);
+    public Optional<TransactionDomain> getTransactionByIdempotencyKey(UUID idempotencyKey) {
+        try {
+            return transactionMapper.transactionEntityToDomain(transactionRepository.getTransactionByIdempotencyKey(idempotencyKey));
+        } catch (DataException e) {
+            throw new TransactionRepositoryException("Ошибка при поиске transaction по idempotencyKey", e);
+        }
     }
 
     public List<TransactionDomain> getTransactionByUserId(Long id) {
@@ -73,7 +76,7 @@ public class TransactionService {
                     .map(transactionMapper::transactionEntityToDomain)
                     .toList();
         } catch (DataException e) {
-            throw new TransactionRepositoryException("Ошибка при получении транзакций");
+            throw new TransactionRepositoryException("Ошибка при получении транзакций", e);
         }
     }
 }

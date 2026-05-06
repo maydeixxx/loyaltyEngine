@@ -1,10 +1,8 @@
 package com.LoyaltyEngine.TransactionService.api;
 
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionCreatingException;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.dto.CreateTransaction;
 import com.LoyaltyEngine.TransactionService.models.dto.TransactionDTO;
-import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import jakarta.validation.Valid;
@@ -14,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -30,10 +27,6 @@ public class TransactionController {
             @RequestHeader(value = "X-IDEMPOTENCY-KEY", required = true) UUID idempotencyKey,
             @RequestBody @Valid CreateTransaction transaction
     ) {
-        Optional<Transaction> transactionIsPresent = transactionService.getTransactionByIdempotencyKey(idempotencyKey);
-        if (transactionIsPresent.isPresent()) {
-            return ResponseEntity.ok(transactionMapper.transactionEntityToDTO(transactionIsPresent.get()));
-        }
         TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(transactionService.createTransaction(transaction.getUserId(), transaction.getAmount(), idempotencyKey));
         return ResponseEntity.status(201).body(savedTransaction);
     }
