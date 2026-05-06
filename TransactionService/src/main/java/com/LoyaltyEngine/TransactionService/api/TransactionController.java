@@ -34,14 +34,8 @@ public class TransactionController {
         if (transactionIsPresent.isPresent()) {
             return ResponseEntity.ok(transactionMapper.transactionEntityToDTO(transactionIsPresent.get()));
         }
-
-        try {
-            TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(transactionService.createTransaction(transaction.getUserId(), transaction.getAmount(), idempotencyKey));
-            return ResponseEntity.status(201).body(savedTransaction);
-        } catch (TransactionCreatingException e) {
-            log.error(String.valueOf(e.getCause()));
-            return ResponseEntity.badRequest().body(String.format("Ошибка при создании транзакции: %s", e.getMessage()));
-        }
+        TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(transactionService.createTransaction(transaction.getUserId(), transaction.getAmount(), idempotencyKey));
+        return ResponseEntity.status(201).body(savedTransaction);
     }
 
     @GetMapping("/user/{userId}")
