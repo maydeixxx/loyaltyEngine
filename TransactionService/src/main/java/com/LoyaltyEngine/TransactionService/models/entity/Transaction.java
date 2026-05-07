@@ -1,14 +1,12 @@
 package com.LoyaltyEngine.TransactionService.models.entity;
 
 import com.LoyaltyEngine.TransactionService.models.domain.Status;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -20,6 +18,13 @@ public class Transaction {
     private Long userId;
     private UUID idempotencyKey;
     private BigDecimal amount;
+    @OneToMany(
+            fetch = FetchType.LAZY,
+            mappedBy = "transaction",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<TransactionItem> transactionItems;
     private LocalDateTime createdAt;
     private Status status;
 }
