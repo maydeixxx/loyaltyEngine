@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.TransactionService.services.configs;
 
-import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreated;
+import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreatedEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +17,7 @@ import java.util.UUID;
 @Configuration
 public class KafkaProducerConfig {
     @Bean
-    public ProducerFactory<UUID, TransactionCreated> transactionCreatedProducerFactory() {
+    public ProducerFactory<UUID, TransactionCreatedEvent> transactionCreatedProducerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -32,7 +32,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<UUID, TransactionCreated> transactionCreatedKafkaTemplate() {
+    public KafkaTemplate<UUID, TransactionCreatedEvent> transactionCreatedKafkaTemplate() {
         return new KafkaTemplate<>(transactionCreatedProducerFactory());
     }
 }

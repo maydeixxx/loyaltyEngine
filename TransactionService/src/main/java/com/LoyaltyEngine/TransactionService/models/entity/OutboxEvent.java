@@ -19,7 +19,6 @@ public class OutboxEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    private String aggregateType;
     private UUID aggregateId;
     private String eventType;
     private String payload;
