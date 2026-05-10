@@ -24,7 +24,7 @@ public class TransactionItemDomain {
             throw new IllegalArgumentException("Name не может быть пустым");
         }
         if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Price не может быть <= 0");
+            throw new IllegalArgumentException("Price не может быть <= 0 или null");
         }
 
         return new TransactionItemDomain(category, name, price);
