@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
@@ -24,7 +24,6 @@ public class OutboxEventPublisher {
     private final ObjectMapper mapper;
 
     @Scheduled(fixedDelay = 5000)
-    @Transactional
     public void sendPendingEvents() {
         List<OutboxEvent> events = outboxEventRepository.findOutboxEventByProcessedFalseOrderByCreatedAtAsc();
         if (events.isEmpty()) {
@@ -39,14 +38,20 @@ public class OutboxEventPublisher {
                 String topic = event.getEventType().replace(".", "_");
                 UUID transactionId = event.getAggregateId();
 
-                template.send(topic, transactionId, payload).get();
-
-                event.setProcessed(true);
-                event.setProcessedAt(LocalDateTime.now());
-
-                log.info("Отправлено сообщение {} в топик {}", event.getId(), topic);
-            } catch (Exception e) {
-                log.error("Ошибка при отправке сообщения {} в топик {}: {}", event.getId(), event.getEventType().replace(".", "_"), e.getMessage());
+                template.send(topic, transactionId, payload).whenComplete(
+                        (result, ex) -> {
+                            if (ex == null) {
+                                event.setProcessed(true);
+                                event.setProcessedAt(LocalDateTime.now());
+                                outboxEventRepository.save(event);
+                                log.info("Отправлено сообщение {} в топик {}", event.getId(), topic);
+                            } else {
+                                log.error("Ошибка при отправке сообщения {} в топик {}: {}", event.getId(), event.getEventType().replace(".", "_"), ex.getMessage());
+                            }
+                        }
+                );
+            } catch (JacksonException e) {
+                log.error("Ошибка обработки payload: {}", e.getMessage());
             }
         }
     }

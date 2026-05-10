@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
+@Table(name = "transaction", indexes = {
+        @Index(name = "idx_idempotency_key", columnList = "idempotencyKey", unique = true),
+        @Index(name = "idx_user_id", columnList = "userId")
+})
 @Data
 public class Transaction {
     @Id

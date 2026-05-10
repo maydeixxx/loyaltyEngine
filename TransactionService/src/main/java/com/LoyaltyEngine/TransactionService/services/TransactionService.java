@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.TransactionService.services;
 
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionKafkaException;
+import com.LoyaltyEngine.TransactionService.exceptions.TransactionMappingException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
@@ -13,10 +13,11 @@ import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepos
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.DataException;
-import org.springframework.kafka.KafkaException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TransactionService {
     private final ObjectMapper mapper;
@@ -73,11 +75,12 @@ public class TransactionService {
                     .build();
             outboxEventRepository.save(outboxEvent);
 
+            log.info("Успешно сохранена новая транзакция с id: {}", savedTransaction.getId());
             return transactionMapper.transactionEntityToDomain(savedTransaction);
         } catch (DataException e) {
             throw new TransactionRepositoryException("Ошибка при сохранении транзакции", e);
-        } catch (KafkaException e) {
-            throw new TransactionKafkaException("Ошибка при отправке новой транзакции в топик transaction_created: " + e.getMessage());
+        } catch (JacksonException e) {
+            throw new TransactionMappingException("Ошибка при маппинге", e);
         }
     }
 
@@ -91,7 +94,7 @@ public class TransactionService {
 
     public Optional<TransactionDomain> getTransactionByIdempotencyKey(UUID idempotencyKey) {
         try {
-            return transactionMapper.transactionEntityToDomain(transactionRepository.getTransactionByIdempotencyKey(idempotencyKey));
+            return transactionRepository.getTransactionByIdempotencyKey(idempotencyKey).map(transactionMapper::transactionEntityToDomain);
         } catch (DataException e) {
             throw new TransactionRepositoryException("Ошибка при поиске transaction по idempotencyKey", e);
         }
