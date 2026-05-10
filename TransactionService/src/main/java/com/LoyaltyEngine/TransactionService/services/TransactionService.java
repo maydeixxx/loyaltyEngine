@@ -4,7 +4,9 @@ import com.LoyaltyEngine.TransactionService.exceptions.TransactionKafkaException
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
+import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
+import com.LoyaltyEngine.TransactionService.models.entity.TransactionItem;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreated;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
@@ -28,13 +30,13 @@ public class TransactionService {
     private final KafkaTemplate<UUID, TransactionCreated> transactionCreatedKafkaTemplate;
 
     @Transactional
-    public TransactionDomain createTransaction(Long userId, BigDecimal amount, UUID idempotencyKey) {
+    public TransactionDomain createTransaction(Long userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey) {
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
         if (transactionByIdempotencyKey.isPresent()) {
             return transactionByIdempotencyKey.get();
         }
 
-        TransactionDomain newTransaction = TransactionDomain.create(userId, amount, idempotencyKey);
+        TransactionDomain newTransaction = TransactionDomain.create(userId, amount, idempotencyKey, items);
         TransactionCreated transactionCreated = TransactionCreated.builder()
                 .userId(userId)
                 .amount(amount)
@@ -43,6 +45,7 @@ public class TransactionService {
 
         try {
             Transaction savedTransaction = transactionRepository.save(transactionMapper.transactionDomainToEntity(newTransaction));
+            //TODO обработка падения кафки
             transactionCreatedKafkaTemplate.send("transaction_created", savedTransaction.getId(), transactionCreated);
             return transactionMapper.transactionEntityToDomain(savedTransaction);
         } catch (DataException e) {

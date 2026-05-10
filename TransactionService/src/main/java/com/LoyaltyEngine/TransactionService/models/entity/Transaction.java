@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,7 +25,21 @@ public class Transaction {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<TransactionItem> transactionItems;
+    private List<TransactionItem> transactionItems = new ArrayList<>();
     private LocalDateTime createdAt;
     private Status status;
+
+    public void setTransactionItems(List<TransactionItem> items) {
+        this.transactionItems.clear();
+        if (items != null) {
+            items.forEach(this::addTransactionItem);
+        }
+    }
+
+    public void addTransactionItem(TransactionItem item) {
+        if (item != null) {
+            transactionItems.add(item);
+            item.setTransaction(this);
+        }
+    }
 }

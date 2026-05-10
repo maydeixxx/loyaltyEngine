@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -16,10 +17,11 @@ public class TransactionDomain {
     private final Long userId;
     private final UUID idempotencyKey;
     private final BigDecimal amount;
+    private final List<TransactionItemDomain> items;
     private final LocalDateTime createdAt;
     private final Status status;
 
-    public static TransactionDomain create(Long userId, BigDecimal amount, UUID idempotencyKey) {
+    public static TransactionDomain create(Long userId, BigDecimal amount, UUID idempotencyKey, List<TransactionItemDomain> items) {
         if (userId == null) {
             throw new IllegalArgumentException("UserId не может быть null");
         }
@@ -35,6 +37,10 @@ public class TransactionDomain {
             throw new IllegalArgumentException("Idempotency key не может быть null");
         }
 
-        return new TransactionDomain(userId, idempotencyKey, amount, LocalDateTime.now(), Status.NEW);
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("Items не может быть пустым");
+        }
+
+        return new TransactionDomain(userId, idempotencyKey, amount, items, LocalDateTime.now(), Status.NEW);
     }
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -13,6 +14,7 @@ public class TransactionDTO {
     private Long userId;
     private UUID idempotencyKey;
     private BigDecimal amount;
+    private List<TransactionItemDTO> items;
     private LocalDateTime createdAt;
     private Status status;
 }

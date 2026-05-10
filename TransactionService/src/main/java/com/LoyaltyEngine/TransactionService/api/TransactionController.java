@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.TransactionService.api;
 
-import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
+import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.dto.CreateTransaction;
 import com.LoyaltyEngine.TransactionService.models.dto.TransactionDTO;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
@@ -23,24 +23,36 @@ public class TransactionController {
     private final TransactionMapper transactionMapper;
 
     @PostMapping()
-    public ResponseEntity<?> createTransaction(
+    public ResponseEntity<TransactionDTO> createTransaction(
             @RequestHeader(value = "X-IDEMPOTENCY-KEY", required = true) UUID idempotencyKey,
             @RequestBody @Valid CreateTransaction transaction
     ) {
-        TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(transactionService.createTransaction(transaction.getUserId(), transaction.getAmount(), idempotencyKey));
+        log.info(
+                "Creating transaction for user: {}, amount: {}, items: {}",
+                transaction.getUserId(), transaction.getAmount(), transaction.getItems()
+        );
+        List<TransactionItemDomain> domainItems = transaction.getItems().stream()
+                .map(transactionMapper::createTransactionItemDtoToDomain)
+                .toList();
+        TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(
+                transactionService.createTransaction(
+                        transaction.getUserId(), transaction.getAmount(), domainItems, idempotencyKey
+                )
+        );
+        log.info("Transaction created successfully with id: {}", savedTransaction.getId());
         return ResponseEntity.status(201).body(savedTransaction);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getTransactionsByUserId(@PathVariable Long userId) {
-        List<TransactionDomain> transactions = transactionService.getTransactionByUserId(userId);
-        return ResponseEntity.ok(transactions.stream().map(transactionMapper::transactionDomainToDTO).toList());
+    public ResponseEntity<List<TransactionDTO>> getTransactionsByUserId(@PathVariable Long userId) {
+        List<TransactionDTO> transactions = transactionService.getTransactionByUserId(userId).stream().map(transactionMapper::transactionDomainToDTO).toList();
+        return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getTransactionById(@PathVariable UUID id) {
-        TransactionDomain transactionById = transactionService.getTransactionById(id);
-        return ResponseEntity.ok(transactionMapper.transactionDomainToDTO(transactionById));
+    public ResponseEntity<TransactionDTO> getTransactionById(@PathVariable UUID id) {
+        TransactionDTO transactionById = transactionMapper.transactionDomainToDTO(transactionService.getTransactionById(id));
+        return ResponseEntity.ok((transactionById));
     }
 
 }
