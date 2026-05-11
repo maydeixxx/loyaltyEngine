@@ -31,6 +31,7 @@ public class TransactionController {
                 "Creating transaction for user: {}, amount: {}, items: {}",
                 transaction.getUserId(), transaction.getAmount(), transaction.getItems()
         );
+
         List<TransactionItemDomain> domainItems = transaction.getItems().stream()
                 .map(transactionMapper::createTransactionItemDtoToDomain)
                 .toList();

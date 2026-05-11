@@ -41,6 +41,14 @@ public class TransactionDomain {
             throw new IllegalArgumentException("Items не может быть пустым");
         }
 
+        BigDecimal totalSum = items.stream()
+                .map(TransactionItemDomain::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (amount.compareTo(totalSum) == 0) {
+            throw new IllegalArgumentException("Сумма транзакции не может превышать итоговую сумму товаров");
+        }
+
         return new TransactionDomain(userId, idempotencyKey, amount, items, LocalDateTime.now(), Status.NEW);
     }
 }
