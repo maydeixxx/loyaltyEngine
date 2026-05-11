@@ -36,6 +36,7 @@ public class OutboxEventPublisher {
             try {
                 TransactionCreatedEvent payload = mapper.readValue(event.getPayload(), TransactionCreatedEvent.class);
                 String topic = event.getEventType().replace(".", "_");
+                log.info("TOPIC: {}", topic);
                 UUID transactionId = event.getAggregateId();
 
                 template.send(topic, transactionId, payload).whenComplete(

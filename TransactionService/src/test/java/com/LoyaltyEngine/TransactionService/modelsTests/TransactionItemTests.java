@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.TransactionService;
+package com.LoyaltyEngine.TransactionService.modelsTests;
 
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import org.junit.jupiter.api.Assertions;
