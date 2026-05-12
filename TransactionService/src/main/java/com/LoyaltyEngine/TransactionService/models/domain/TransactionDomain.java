@@ -21,7 +21,7 @@ public class TransactionDomain {
     private final LocalDateTime createdAt;
     private final Status status;
 
-    public static TransactionDomain create(Long userId, BigDecimal amount, UUID idempotencyKey, List<TransactionItemDomain> items) {
+    public static TransactionDomain create(Long userId, UUID idempotencyKey, BigDecimal amount, List<TransactionItemDomain> items) {
         if (userId == null) {
             throw new IllegalArgumentException("UserId не может быть null");
         }
@@ -45,7 +45,7 @@ public class TransactionDomain {
                 .map(TransactionItemDomain::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (amount.compareTo(totalSum) == 0) {
+        if (amount.compareTo(totalSum) > 0) {
             throw new IllegalArgumentException("Сумма транзакции не может превышать итоговую сумму товаров");
         }
 

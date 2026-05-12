@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -24,6 +25,7 @@ public class OutboxEventPublisher {
     private final ObjectMapper mapper;
 
     @Scheduled(fixedDelay = 5000)
+    @Transactional
     public void sendPendingEvents() {
         List<OutboxEvent> events = outboxEventRepository.findOutboxEventByProcessedFalseOrderByCreatedAtAsc();
         if (events.isEmpty()) {

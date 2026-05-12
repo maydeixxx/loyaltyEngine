@@ -33,8 +33,8 @@ public class Transaction {
     private LocalDateTime createdAt;
     private Status status;
 
+    // Только для создания новых транзакций
     public void setTransactionItems(List<TransactionItem> items) {
-        this.transactionItems.clear();
         if (items != null) {
             items.forEach(this::addTransactionItem);
         }

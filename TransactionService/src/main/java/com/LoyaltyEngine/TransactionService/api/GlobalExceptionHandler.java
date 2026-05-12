@@ -1,8 +1,6 @@
 package com.LoyaltyEngine.TransactionService.api;
 
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionCreatingException;
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
+import com.LoyaltyEngine.TransactionService.exceptions.*;
 import com.LoyaltyEngine.TransactionService.models.apiResponses.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -55,6 +53,18 @@ public class GlobalExceptionHandler {
         log.error("Error 500: ", ex);
         ErrorResponse errorResponse = buildResponse("Global Error", new HashMap<>(), "Непредвиденная ошибка на сервере", 500, request);
         return ResponseEntity.status(500).body(errorResponse);
+    }
+
+    @ExceptionHandler(TransactionMappingException.class)
+    public ResponseEntity<?> handleTransactionMappingException(TransactionMappingException ex, WebRequest request) {
+        ErrorResponse errorResponse = buildResponse("Error while mapping transaction", new HashMap<>(), ex.getMessage(), 400, request);
+        return ResponseEntity.status(400).body(errorResponse);
+    }
+
+    @ExceptionHandler(DuplicateTransactionException.class)
+    public ResponseEntity<?> handleDuplicateTransactionException(DuplicateTransactionException ex, WebRequest request) {
+        ErrorResponse errorResponse = buildResponse("Transaction already exists", new HashMap<>(), ex.getMessage(), 409, request);
+        return ResponseEntity.status(409).body(errorResponse);
     }
 
     private ErrorResponse buildResponse(String error, Map<String, String> errors, String message, int status, WebRequest request) {
