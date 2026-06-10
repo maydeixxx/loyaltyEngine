@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.RuleEngineService.services;
+package com.LoyaltyEngine.RuleEngineService.services.interfaces;
 
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRule;
 import org.springframework.data.jpa.repository.JpaRepository;

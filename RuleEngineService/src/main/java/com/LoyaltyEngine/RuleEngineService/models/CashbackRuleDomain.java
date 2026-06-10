@@ -17,9 +17,8 @@ public class CashbackRuleDomain {
     private final BigDecimal percentage;
     private final LocalDateTime validFrom;
     private final LocalDateTime validTo;
-    private final boolean active;
 
-    public static CashbackRuleDomain createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo, boolean active, LocalDateTime now) {
+    public static CashbackRuleDomain createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
         if (category == null || category.isBlank()) {
             throw new CashbackRuleValidationException("Category cannot be null or blank");
         }
@@ -28,18 +27,18 @@ public class CashbackRuleDomain {
             throw new CashbackRuleValidationException("Percentage cannot be less than 1");
         }
 
-        if (validFrom == null || validFrom.isBefore(now)) {
-            throw new CashbackRuleValidationException("Valid from cannot be null or before present time");
+        if (validFrom == null) {
+            throw new CashbackRuleValidationException("Valid from cannot be null");
         }
 
-        if (validTo == null || validTo.isBefore(now)) {
-            throw new CashbackRuleValidationException("Valid to cannot be null or before present time");
+        if (validTo == null) {
+            throw new CashbackRuleValidationException("Valid to cannot be null");
         }
 
         if (validFrom.isAfter(validTo)) {
             throw new CashbackRuleValidationException("Valid from cannot be after validTo");
         }
 
-        return new CashbackRuleDomain(category, percentage, validFrom, validTo, active);
+        return new CashbackRuleDomain(category, percentage, validFrom, validTo);
     }
 }

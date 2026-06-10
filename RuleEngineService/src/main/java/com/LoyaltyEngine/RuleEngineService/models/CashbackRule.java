@@ -21,5 +21,5 @@ public class CashbackRule {
     private BigDecimal percentage;
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
-    boolean active;
+
 }
