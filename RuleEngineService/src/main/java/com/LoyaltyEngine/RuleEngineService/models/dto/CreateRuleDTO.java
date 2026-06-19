@@ -1,23 +1,21 @@
 package com.LoyaltyEngine.RuleEngineService.models.dto;
 
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Getter
-@RequiredArgsConstructor
-public class CreateRuleDTO {
-    @NotNull(message = "Категория обязательна к указанию")
-    private final String category;
-    @NotNull(message = "Процент обязателен к указанию")
-    @DecimalMin(value = "1.0", message = "Процент правила должен быть больше 1")
-    private final BigDecimal percentage;
-    @NotNull(message = "Дата старта правила обязательна к указанию")
-    private final LocalDateTime validFrom;
-    @NotNull(message = "Дата окончания правила обязательна к указанию")
-    private final LocalDateTime validTo;
-}
+public record CreateRuleDTO(
+        @NotNull(message = "Category cant be null")
+        @Size(min = 1, message = "Category cant be empty")
+        String category,
+        @NotNull(message = "Rule percentage cant be null")
+        @Positive(message = "Rule percentage cant be negative")
+        BigDecimal percentage,
+        @NotNull(message = "Valid from cant be null")
+        LocalDateTime validFrom,
+        @NotNull(message = "Valid to cant be null")
+        LocalDateTime validTo)
+{}

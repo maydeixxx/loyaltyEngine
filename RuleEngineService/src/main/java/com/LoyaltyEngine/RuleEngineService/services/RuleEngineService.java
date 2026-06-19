@@ -53,15 +53,25 @@ public class RuleEngineService {
     }
 
     @Transactional
-    @CacheEvict(value = "cashback_rules", key = "#request.category")
+    @CacheEvict(value = "cashback_rules", allEntries = true)
     public void updateCashbackRule(UpdateCashbackModelDTO newValue, UUID id) {
         CashbackRule cashbackRuleById = ruleEngineRepository.findById(id).orElseThrow(() -> new CashbackRuleNotFoundException("Rule not found: " + id));
 
-        CashbackRuleDomain upd = CashbackRuleDomain.createCashbackRule(newValue.category(), newValue.percentage(), newValue.validFrom(), newValue.validTo());
-        cashbackRuleById.setPercentage(upd.getPercentage());
-        cashbackRuleById.setValidTo(upd.getValidTo());
-        cashbackRuleById.setValidFrom(upd.getValidFrom());
-        cashbackRuleById.setCategory(upd.getCategory());
+        if (newValue.category() != null) {
+            cashbackRuleById.setCategory(newValue.category());
+        }
+
+        if (newValue.percentage() != null) {
+            cashbackRuleById.setPercentage(newValue.percentage());
+        }
+
+        if (newValue.validFrom() != null) {
+            cashbackRuleById.setValidFrom(newValue.validFrom());
+        }
+
+        if (newValue.validTo() != null) {
+            cashbackRuleById.setValidTo(newValue.validTo());
+        }
 
         ruleEngineRepository.save(cashbackRuleById);
     }

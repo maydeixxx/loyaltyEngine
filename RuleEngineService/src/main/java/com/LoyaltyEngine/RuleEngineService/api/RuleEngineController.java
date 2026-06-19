@@ -20,8 +20,8 @@ public class RuleEngineController {
 
     @PostMapping()
     public ResponseEntity<?> createCashbackRule(@RequestBody @Validated CreateRuleDTO dto) {
-        ruleEngineService.createCashbackRule(dto.getCategory(), dto.getPercentage(), dto.getValidFrom(), dto.getValidTo());
-        return ResponseEntity.status(201).body(String.format("Новое правило для категории %s успешно создано!", dto.getCategory()));
+        ruleEngineService.createCashbackRule(dto.category(), dto.percentage(), dto.validFrom(), dto.validTo());
+        return ResponseEntity.status(201).body(String.format("New rule by category %s successfully created!", dto.category()));
     }
 
     @GetMapping()
@@ -30,9 +30,9 @@ public class RuleEngineController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateRule(@PathVariable UUID id, @RequestBody UpdateCashbackModelDTO dto) {
+    public ResponseEntity<?> updateRule(@PathVariable UUID id, @RequestBody @Validated UpdateCashbackModelDTO dto) {
         ruleEngineService.updateCashbackRule(dto, id);
-        return ResponseEntity.ok().body(String.format("Правило %s успешно обновлено!", id));
+        return ResponseEntity.ok().body(String.format("Rule %s successfully updated!", id));
     }
 
     @DeleteMapping("/{id}")
