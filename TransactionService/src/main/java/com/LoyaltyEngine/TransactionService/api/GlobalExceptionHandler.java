@@ -61,12 +61,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(400).body(errorResponse);
     }
 
-    @ExceptionHandler(DuplicateTransactionException.class)
-    public ResponseEntity<?> handleDuplicateTransactionException(DuplicateTransactionException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildResponse("Transaction already exists", new HashMap<>(), ex.getMessage(), 409, request);
-        return ResponseEntity.status(409).body(errorResponse);
-    }
-
     private ErrorResponse buildResponse(String error, Map<String, String> errors, String message, int status, WebRequest request) {
         return ErrorResponse.builder()
                 .error(error)

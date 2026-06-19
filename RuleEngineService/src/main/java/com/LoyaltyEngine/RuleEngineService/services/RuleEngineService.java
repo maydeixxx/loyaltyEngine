@@ -48,7 +48,7 @@ public class RuleEngineService {
         ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRule));
     }
 
-    public List<CashbackRuleDomain> getCashbackRules() {
+    public List<CashbackRuleDomain> getAllRules() {
         return ruleEngineRepository.findAll().stream().map(ruleEngineMapper::entityToDomain).toList();
     }
 

@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Getter
 @EqualsAndHashCode
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+@RequiredArgsConstructor
 public class CashbackRuleDomain {
     @Setter
     private UUID id;
