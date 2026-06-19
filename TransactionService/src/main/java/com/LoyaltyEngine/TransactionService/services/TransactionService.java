@@ -1,6 +1,5 @@
 package com.LoyaltyEngine.TransactionService.services;
 
-import com.LoyaltyEngine.TransactionService.exceptions.DuplicateTransactionException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionMappingException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
@@ -40,7 +39,7 @@ public class TransactionService {
     public TransactionDomain createTransaction(Long userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey) {
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
         if (transactionByIdempotencyKey.isPresent()) {
-            throw new DuplicateTransactionException(String.format("Transaction with IK %s already exists", idempotencyKey.toString()));
+            return transactionByIdempotencyKey.get();
         }
 
         TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, items);
