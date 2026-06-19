@@ -10,17 +10,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(CashbackRuleNotFoundException.class)
-    public ResponseEntity<?> handlerCashbackRuleNotFoundException(CashbackRuleNotFoundException e, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handlerCashbackRuleNotFoundException(CashbackRuleNotFoundException e, WebRequest request) {
         ErrorResponse response = ErrorResponse.builder()
-                .error("Не найдено правило")
+                .error("Rule not found")
                 .code(404)
                 .message(e.getMessage())
-                .path(request.getContextPath().replace("uri", ""))
+                .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(LocalDateTime.now())
                 .build();
 
@@ -28,12 +29,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CashbackRuleValidationException.class)
-    public ResponseEntity<?> handlerCashbackRuleValidationException(CashbackRuleValidationException e, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handlerCashbackRuleValidationException(CashbackRuleValidationException e, WebRequest request) {
         ErrorResponse response = ErrorResponse.builder()
-                .error("Невалидные данные")
+                .error("Not valid data")
                 .message(e.getMessage())
                 .code(400)
-                .path(request.getContextPath().replace("uri=", ""))
+                .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(LocalDateTime.now())
                 .build();
 
@@ -41,12 +42,31 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handlerMethodArgumentNotValidException(MethodArgumentNotValidException e, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handlerMethodArgumentNotValidException(MethodArgumentNotValidException e, WebRequest request) {
+        String errors = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+
         ErrorResponse response = ErrorResponse.builder()
-                .error("Невалидные данные")
-                .message(e.getMessage())
+                .error("Not valid data")
+                .message(errors)
                 .code(400)
-                .path(request.getContextPath().replace("uri=", ""))
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handlerException(Exception e, WebRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .error("Server error")
+                .message(e.getMessage())
+                .code(500)
+                .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(LocalDateTime.now())
                 .build();
 
