@@ -15,6 +15,7 @@
 	<modules>
 		<module>RuleEngineService</module>
 		<module>transactionService</module>
+		<module>walletService</module>
 	</modules>
 	<name/>
 	<description/>
