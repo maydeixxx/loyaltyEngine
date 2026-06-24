@@ -3,6 +3,7 @@ package com.LoyaltyEngine.TransactionService.services;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionMappingException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
+import com.LoyaltyEngine.TransactionService.models.domain.Status;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
@@ -15,6 +16,7 @@ import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepos
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.DataException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -34,6 +36,8 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final OutboxEventRepository outboxEventRepository;
+    @Value("${kafka.topics.transaction-created}")
+    private String transactionCreatedTopic;
 
     @Transactional
     public TransactionDomain createTransaction(Long userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey) {
@@ -69,7 +73,7 @@ public class TransactionService {
             OutboxEvent outboxEvent = OutboxEvent.builder()
                     .aggregateId(savedTransaction.getId())
                     .createdAt(LocalDateTime.now())
-                    .eventType("transaction.created")
+                    .eventType(transactionCreatedTopic)
                     .payload(mapper.writeValueAsString(transactionCreated))
                     .processed(false)
                     .build();
@@ -110,5 +114,13 @@ public class TransactionService {
         } catch (DataException e) {
             throw new TransactionRepositoryException("Ошибка при получении транзакций", e);
         }
+    }
+
+    @Transactional
+    public void updateStatus(Status status, UUID transactionId) {
+        transactionRepository
+                .getTransactionById(transactionId)
+                .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", transactionId)))
+                .setStatus(status);
     }
 }

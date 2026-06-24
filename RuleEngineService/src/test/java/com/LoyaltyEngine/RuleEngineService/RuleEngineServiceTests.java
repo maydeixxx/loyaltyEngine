@@ -120,4 +120,22 @@ public class RuleEngineServiceTests {
         //then
         Assertions.assertEquals(new BigDecimal("12.5"), percentage1);
     }
+
+    @Test
+    @DisplayName("Получение базового процента для категории")
+    void getBasePercentageByCategory() {
+        //given
+        String category = "electronics";
+        BigDecimal percentage = new BigDecimal("12.5");
+        LocalDateTime validFrom = LocalDateTime.now();
+        LocalDateTime validTo = LocalDateTime.now().plusDays(1);
+        ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
+
+
+        //when
+        BigDecimal percentage1 = ruleEngineService.getPercentageForCategory("cars");
+
+        //then
+        Assertions.assertEquals(new BigDecimal("1.0"), percentage1);
+    }
 }

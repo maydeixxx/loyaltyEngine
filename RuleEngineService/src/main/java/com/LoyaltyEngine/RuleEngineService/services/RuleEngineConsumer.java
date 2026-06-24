@@ -23,7 +23,7 @@ public class RuleEngineConsumer {
 
     @KafkaListener(
             topics = "${kafka.topics.transaction-created}",
-            groupId = "ruleEngineService",
+            groupId = "rule_engine_service",
             containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
     )
     private void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEventModel> record) {
