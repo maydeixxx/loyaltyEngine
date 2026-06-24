@@ -5,6 +5,7 @@ import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventMode
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletProducer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WalletConsumer {
@@ -20,7 +22,7 @@ public class WalletConsumer {
     private final WalletProducer walletProducer;
 
     @KafkaListener(
-            topics = "points_calculated",
+            topics = "${kafka.topics.points-calculated}",
             groupId = "wallet_service",
             containerFactory = "calculatedCashbackEventModelConcurrentKafkaListenerContainerFactory"
     )
@@ -42,15 +44,8 @@ public class WalletConsumer {
             walletProducer.sendMessageToPointsFailed(transactionId, pointsFailed);
             ack.acknowledge();
         } catch (Exception e) {
-            PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
-                    .userId(model.getUserId())
-                    .cause("Wallet Error")
-                    .amount(model.getAmount())
-                    .failedAt(LocalDateTime.now())
-                    .build();
-
-            walletProducer.sendMessageToPointsFailed(transactionId, pointsFailed);
-            ack.acknowledge();
+            log.error("Error processing cashback for transaction {} : {}", transactionId, e.getMessage());
+            throw e;
         }
     }
 }

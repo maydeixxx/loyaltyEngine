@@ -43,4 +43,27 @@ public class KafkaProducerConfig {
         return new KafkaTemplate<>(pointsFailedEventProducerFactory());
     }
 
+    @Bean
+    public ProducerFactory<UUID, Object> dlqProducerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 15000);
+        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+
+        return new DefaultKafkaProducerFactory<>(
+                props,
+                new UUIDSerializer(),
+                new JacksonJsonSerializer<>()
+        );
+    }
+
+    @Bean
+    public KafkaTemplate<UUID, Object> dlqKafkaTemplate() {
+        return new KafkaTemplate<>(dlqProducerFactory());
+    }
+
 }

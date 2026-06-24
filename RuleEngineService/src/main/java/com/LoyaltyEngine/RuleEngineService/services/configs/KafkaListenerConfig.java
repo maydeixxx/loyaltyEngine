@@ -27,7 +27,7 @@ public class KafkaListenerConfig {
     private String bootstrapServers;
     private final KafkaTopicsConfig topicsConfig;
     @Qualifier("dlqKafkaTemplate")
-    private final KafkaTemplate<UUID, TransactionCreatedEventModel> dlqKafkaTemplate;
+    private final KafkaTemplate<UUID, Object> dlqKafkaTemplate;
 
     @Bean
     public ConsumerFactory<UUID, TransactionCreatedEventModel> transactionCreatedEventModelConsumerFactory() {
@@ -67,7 +67,7 @@ public class KafkaListenerConfig {
                             consumerRecord.topic() + topicsConfig.getDlqSuffix(),
                             consumerRecord.partition(),
                             (UUID) consumerRecord.key(),
-                            (TransactionCreatedEventModel) consumerRecord.value());
+                            consumerRecord.value());
                 },
                 backoff
         );
