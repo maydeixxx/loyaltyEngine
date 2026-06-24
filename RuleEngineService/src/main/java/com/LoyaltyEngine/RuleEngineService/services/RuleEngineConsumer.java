@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.TopicPartition;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -22,10 +21,11 @@ public class RuleEngineConsumer {
     private final RuleEngineProducer ruleEngineProducer;
     private final BigDecimal hundred = new BigDecimal("100.0");
 
-    @KafkaListener(topicPartitions = @TopicPartition(partitions = "{0}",
-            topic = "transaction_created"),
-            groupId = "ruleEngineService",
-            containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory")
+    @KafkaListener(
+            topics = "${kafka.topics.transaction-created}",
+            groupId = "rule_engine_service",
+            containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
+    )
     private void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEventModel> record) {
         TransactionCreatedEventModel model = record.value();
 
