@@ -15,8 +15,10 @@ public class Wallet {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+    private Long userId;
     private BigDecimal balance;
     private WalletStatus status;
+    @Version
     private Long version;
     private LocalDateTime updatedAt;
 }
