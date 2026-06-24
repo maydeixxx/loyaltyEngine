@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.RuleEngineService.services.configs;
 
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEventModel;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,5 +39,25 @@ public class KafkaProducerConfig {
     @Bean
     public KafkaTemplate<UUID, CalculatedCashbackEventModel> calculatedCashbackEventModelKafkaTemplate() {
         return new KafkaTemplate<>(calculatedCashbackEventModelProducerFactory());
+    }
+
+    @Bean
+    public ProducerFactory<UUID, TransactionCreatedEventModel> dlqProducerFactory() {
+        Map<String, Object> props = new HashMap<>();
+
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
+        props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 15000);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
+    public KafkaTemplate<UUID, TransactionCreatedEventModel> dlqKafkaTemplate() {
+        return new KafkaTemplate<>(dlqProducerFactory());
     }
 }
