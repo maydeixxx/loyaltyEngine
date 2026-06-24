@@ -7,12 +7,15 @@ import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.entity.Wallet;
+import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,8 @@ public class WalletService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
+    @Qualifier("pointsFailedEventKafkaTemplate")
+    private final KafkaTemplate<UUID, PointsFailedEvent> kafkaTemplate;
 
     private Wallet createWallet(Long userId) {
         return walletRepository.save(walletMapper.domainToEntity(WalletDomain.createWallet(userId)));
@@ -40,6 +45,14 @@ public class WalletService {
                 .orElseGet(() -> createWallet(userId));
 
         if (wallet.getStatus() == WalletStatus.BLOCKED) {
+            PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
+                    .userId(userId)
+                    .amount(amount)
+                    .cause("Wallet is blocked")
+                    .failedAt(LocalDateTime.now())
+                    .build();
+
+
             throw new WalletBlockedException(String.format("Wallet %s blocked.", wallet.getId()));
         }
 
