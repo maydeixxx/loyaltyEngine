@@ -1,5 +1,6 @@
 package com.LoyaltyEngine.TransactionService.services.configs;
 
+import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -15,6 +16,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
+import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,23 +34,23 @@ public class KafkaListenerConfig {
     private String dlqSuffix;
 
     @Bean
-    public ConsumerFactory<UUID, String> pointsFailedConsumerFactory() {
+    public ConsumerFactory<UUID, PointsFailedEvent> pointsFailedEventConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new StringDeserializer()
+                new JacksonJsonDeserializer<>()
         );
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<UUID, String> pointsFailedEventConsumerRecord() {
-        ConcurrentKafkaListenerContainerFactory<UUID, String> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
-        containerFactory.setConsumerFactory(pointsFailedConsumerFactory());
+    public ConcurrentKafkaListenerContainerFactory<UUID, PointsFailedEvent> pointsFailedEventConcurrentKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, PointsFailedEvent> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
+        containerFactory.setConsumerFactory(pointsFailedEventConsumerFactory());
         containerFactory.setCommonErrorHandler(errorHandler());
 
         return containerFactory;

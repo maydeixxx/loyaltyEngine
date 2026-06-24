@@ -45,14 +45,6 @@ public class WalletService {
                 .orElseGet(() -> createWallet(userId));
 
         if (wallet.getStatus() == WalletStatus.BLOCKED) {
-            PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
-                    .userId(userId)
-                    .amount(amount)
-                    .cause("Wallet is blocked")
-                    .failedAt(LocalDateTime.now())
-                    .build();
-
-
             throw new WalletBlockedException(String.format("Wallet %s blocked.", wallet.getId()));
         }
 

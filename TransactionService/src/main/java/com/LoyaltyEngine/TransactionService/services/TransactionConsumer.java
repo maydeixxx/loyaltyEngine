@@ -1,12 +1,15 @@
 package com.LoyaltyEngine.TransactionService.services;
 
 import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -18,13 +21,17 @@ public class TransactionConsumer {
     @KafkaListener(
             topics = "${kafka.topics.points-failed}",
             groupId = "transaction_service",
-            containerFactory = "pointsFailedConsumerFactory"
+            containerFactory = "pointsFailedEventConcurrentKafkaListenerContainerFactory"
     )
-    private void handlePointsFailed(ConsumerRecord<UUID, String> record) {
+    private void handlePointsFailed(ConsumerRecord<UUID, PointsFailedEvent> record) {
         UUID transactionId = record.key();
-        String cause = record.value();
+        PointsFailedEvent pointsFailed = record.value();
+        String cause = pointsFailed.getCause();
+        LocalDateTime failedAt = pointsFailed.getFailedAt();
+        Long userId = pointsFailed.getUserId();
+        BigDecimal amount = pointsFailed.getAmount();
 
         transactionService.updateStatus(Status.REJECTED, transactionId);
-        log.info("Новый статус транзакции [{}] - {} || Причина - {}", transactionId, Status.REJECTED, cause);
+        log.info("Новый статус транзакции [{}] - {} || Причина - {} || timestamp - {} || User id - {} || amount - {}", transactionId, Status.REJECTED, cause, failedAt, userId, amount);
     }
 }

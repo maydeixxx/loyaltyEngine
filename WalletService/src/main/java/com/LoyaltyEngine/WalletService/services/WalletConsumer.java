@@ -44,7 +44,7 @@ public class WalletConsumer {
         } catch (Exception e) {
             PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
                     .userId(model.getUserId())
-                    .cause("Wallet is blocked")
+                    .cause("Wallet Error")
                     .amount(model.getAmount())
                     .failedAt(LocalDateTime.now())
                     .build();
