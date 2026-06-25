@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .stream()
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-        ErrorResponse errorResponse = buildResponse("Validation Failed", errors, "Ошибка валидации данных", 400, request);
+        ErrorResponse errorResponse = buildResponse("Validation Failed", errors, "Error validating data", 400, request);
 
         return ResponseEntity.status(400).body(errorResponse);
     }
@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> globalExceptionHandler(Exception ex, WebRequest request) {
         log.error("Error 500: ", ex);
-        ErrorResponse errorResponse = buildResponse("Global Error", new HashMap<>(), "Непредвиденная ошибка на сервере", 500, request);
+        ErrorResponse errorResponse = buildResponse("Global Error", new HashMap<>(), "Error on server", 500, request);
         return ResponseEntity.status(500).body(errorResponse);
     }
 

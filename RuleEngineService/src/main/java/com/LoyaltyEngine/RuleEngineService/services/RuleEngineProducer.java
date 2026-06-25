@@ -2,6 +2,7 @@ package com.LoyaltyEngine.RuleEngineService.services;
 
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.RuleEngineService.services.configs.KafkaTopicsConfig;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -14,9 +15,8 @@ public class RuleEngineProducer {
     private final KafkaTemplate<UUID, CalculatedCashbackEventModel> kafkaTemplate;
 
     public RuleEngineProducer(
-            @Qualifier(value = "calculatedCashbackEventModelKafkaTemplate")
-            KafkaTemplate<UUID, CalculatedCashbackEventModel> kafkaTemplate,
-            KafkaTopicsConfig topicsConfig
+            KafkaTopicsConfig topicsConfig,
+            @Qualifier("calculatedCashbackEventModelKafkaTemplate") KafkaTemplate<UUID, CalculatedCashbackEventModel> kafkaTemplate
     ) {
         this.topicsConfig = topicsConfig;
         this.kafkaTemplate = kafkaTemplate;

@@ -20,7 +20,7 @@ public class RuleEngineController {
 
     @PostMapping()
     public ResponseEntity<?> createCashbackRule(@RequestBody @Validated CreateRuleDTO dto) {
-        ruleEngineService.createCashbackRule(dto.category(), dto.percentage(), dto.validFrom(), dto.validTo());
+        ruleEngineService.createCashbackRule(dto.category().toLowerCase(), dto.percentage(), dto.validFrom(), dto.validTo());
         return ResponseEntity.status(201).body(String.format("New rule by category %s successfully created!", dto.category()));
     }
 

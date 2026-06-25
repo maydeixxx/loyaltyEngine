@@ -79,12 +79,12 @@ public class TransactionService {
                     .build();
             outboxEventRepository.save(outboxEvent);
 
-            log.info("Успешно сохранена новая транзакция с id: {}", savedTransaction.getId());
+            log.info("Successfully saved new trans. - id: {}", savedTransaction.getId());
             return transactionMapper.transactionEntityToDomain(savedTransaction);
         } catch (DataException e) {
-            throw new TransactionRepositoryException("Ошибка при сохранении транзакции", e);
+            throw new TransactionRepositoryException("Error saving new trans.", e);
         } catch (JacksonException e) {
-            throw new TransactionMappingException("Ошибка при маппинге", e);
+            throw new TransactionMappingException("Error mapping", e);
         }
     }
 
@@ -100,7 +100,7 @@ public class TransactionService {
         try {
             return transactionRepository.getTransactionByIdempotencyKey(idempotencyKey).map(transactionMapper::transactionEntityToDomain);
         } catch (DataException e) {
-            throw new TransactionRepositoryException("Ошибка при поиске transaction по idempotencyKey", e);
+            throw new TransactionRepositoryException("Error finding trans. by idempotencyKey", e);
         }
     }
 
@@ -112,7 +112,7 @@ public class TransactionService {
                     .map(transactionMapper::transactionEntityToDomain)
                     .toList();
         } catch (DataException e) {
-            throw new TransactionRepositoryException("Ошибка при получении транзакций", e);
+            throw new TransactionRepositoryException("Error getting transaction", e);
         }
     }
 
