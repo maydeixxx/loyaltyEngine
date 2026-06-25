@@ -27,14 +27,12 @@ public class RuleEngineService {
 
     @Cacheable(value = "cashback_rules", key = "#category")
     public BigDecimal getPercentageForCategory(String category) {
-        Optional<CashbackRule> cashbackRuleByCategory = ruleEngineRepository.getCashbackRuleByCategory(category);
+        List<CashbackRule> cashbackRulesByCategory = ruleEngineRepository.getCashbackRuleByCategoryOrderByValidFromDesc(category);
+        LocalDateTime now = LocalDateTime.now();
 
-        if (cashbackRuleByCategory.isPresent()) {
-            CashbackRule cashbackRule = cashbackRuleByCategory.get();
-            LocalDateTime validFrom = cashbackRule.getValidFrom();
-            LocalDateTime validTo = cashbackRule.getValidTo();
-
-            if ((validFrom.isBefore(LocalDateTime.now()) || validFrom.isEqual(LocalDateTime.now())) && ((validTo.isAfter(LocalDateTime.now())) || validTo.isEqual(LocalDateTime.now()))) {
+        for (CashbackRule cashbackRule : cashbackRulesByCategory) {
+            if ((cashbackRule.getValidFrom().isBefore(now) || cashbackRule.getValidFrom().isEqual(now))
+                    && (cashbackRule.getValidTo().isAfter(now) || cashbackRule.getValidTo().isEqual(now))) {
                 return cashbackRule.getPercentage();
             }
         }

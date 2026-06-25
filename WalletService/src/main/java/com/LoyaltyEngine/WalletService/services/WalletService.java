@@ -7,7 +7,6 @@ import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.entity.Wallet;
-import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
@@ -19,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -90,5 +90,17 @@ public class WalletService {
                 .findWalletByUserId(userId)
                 .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId)))
                 .getBalance();
+    }
+
+    public List<WalletTransactionDomain> getTransactionsHistory(Long userId) {
+        UUID walletId = walletRepository
+                .findWalletByUserId(userId)
+                .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId)))
+                .getId();
+
+        return walletTransactionRepository.getWalletTransactionsByWalletId(walletId)
+                .stream()
+                .map(walletTransactionMapper::entityToDomain)
+                .toList();
     }
 }
