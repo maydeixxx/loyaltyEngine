@@ -3,7 +3,6 @@ package com.LoyaltyEngine.WalletService.services;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -33,8 +32,10 @@ public class WalletConsumer {
         try {
             walletService.creditPoints(model.getUserId(), transactionId, model.getAmount());
             ack.acknowledge();
+            walletProducer.sendHandledTransaction(transactionId, model.getUserId());
         } catch (WalletBlockedException e) {
             PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
+                    .transactionId(transactionId)
                     .userId(model.getUserId())
                     .cause("Wallet is blocked")
                     .amount(model.getAmount())

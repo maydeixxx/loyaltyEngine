@@ -1,8 +1,8 @@
 package com.LoyaltyEngine.RuleEngineService.services;
 
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
-import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEventModel;
-import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionItemEventModel;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionItemEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -26,14 +26,14 @@ public class RuleEngineConsumer {
             groupId = "rule_engine_service",
             containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
     )
-    private void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEventModel> record) {
-        TransactionCreatedEventModel model = record.value();
+    private void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEvent> record) {
+        TransactionCreatedEvent model = record.value();
 
         UUID transactionId = record.key();
         Long userId = model.getUserId();
         BigDecimal cashback = BigDecimal.ZERO;
 
-        for (TransactionItemEventModel item : model.getItems()) {
+        for (TransactionItemEvent item : model.getItems()) {
             BigDecimal itemPrice = item.getPrice();
             BigDecimal percentageForCategory = ruleEngineService.getPercentageForCategory(item.getCategory());
 
@@ -41,6 +41,7 @@ public class RuleEngineConsumer {
         }
 
         CalculatedCashbackEventModel calculatedCashbackModel = CalculatedCashbackEventModel.builder()
+                .transactionId(transactionId)
                 .userId(userId)
                 .amount(cashback)
                 .build();

@@ -12,10 +12,10 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TransactionCreatedEventModel {
+public class TransactionCreatedEvent {
     private UUID transactionId;
     private Long userId;
     private BigDecimal amount;
-    private List<TransactionItemEventModel> items;
+    private List<TransactionItemEvent> items;
     private LocalDateTime createdAt;
 }

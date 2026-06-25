@@ -1,7 +1,6 @@
 package com.LoyaltyEngine.RuleEngineService.services.configs;
 
-import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEventModel;
-import lombok.RequiredArgsConstructor;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
@@ -14,6 +13,8 @@ import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,31 +22,35 @@ import java.util.UUID;
 
 @Configuration
 @Slf4j
-@RequiredArgsConstructor
 public class KafkaListenerConfig {
     @Value("${spring.kafka.bootstrap-servers:9092}")
     private String bootstrapServers;
     private final KafkaTopicsConfig topicsConfig;
-    @Qualifier("dlqKafkaTemplate")
     private final KafkaTemplate<UUID, Object> dlqKafkaTemplate;
 
+    public KafkaListenerConfig(KafkaTopicsConfig topicsConfig, @Qualifier("dlqKafkaTemplate") KafkaTemplate<UUID, Object> dlqKafkaTemplate) {
+        this.topicsConfig = topicsConfig;
+        this.dlqKafkaTemplate = dlqKafkaTemplate;
+    }
+
     @Bean
-    public ConsumerFactory<UUID, TransactionCreatedEventModel> transactionCreatedEventModelConsumerFactory() {
+    public ConsumerFactory<UUID, TransactionCreatedEvent> transactionCreatedEventModelConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+        props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new org.apache.kafka.common.serialization.UUIDDeserializer(),
-                new JacksonJsonDeserializer<>()
+                new JacksonJsonDeserializer<>(TransactionCreatedEvent.class, false)
         );
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<UUID, TransactionCreatedEventModel> transactionCreatedEventModelConcurrentKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<UUID, TransactionCreatedEventModel> factory = new ConcurrentKafkaListenerContainerFactory<>();
+    public ConcurrentKafkaListenerContainerFactory<UUID, TransactionCreatedEvent> transactionCreatedEventModelConcurrentKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, TransactionCreatedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(transactionCreatedEventModelConsumerFactory());
         factory.setCommonErrorHandler(kafkaErrorHandler());
 
@@ -61,7 +66,7 @@ public class KafkaListenerConfig {
 
         return new DefaultErrorHandler(
                 (consumerRecord, e) -> {
-                    log.error("Не удалось обработать сообщения из топика {} : {}", consumerRecord.topic(), e.getMessage());
+                    log.error("Error handling message from topic {} :", consumerRecord.topic(), e);
 
                     dlqKafkaTemplate.send(
                             consumerRecord.topic() + topicsConfig.getDlqSuffix(),

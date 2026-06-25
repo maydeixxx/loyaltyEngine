@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TransactionItemEventModel {
+public class TransactionItemEvent {
     private String category;
     private String name;
     private BigDecimal price;

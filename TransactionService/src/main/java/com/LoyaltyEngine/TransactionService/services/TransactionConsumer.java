@@ -2,6 +2,7 @@ package com.LoyaltyEngine.TransactionService.services;
 
 import com.LoyaltyEngine.TransactionService.models.domain.Status;
 import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
+import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionHandledEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -33,5 +34,19 @@ public class TransactionConsumer {
 
         transactionService.updateStatus(Status.REJECTED, transactionId);
         log.info("Новый статус транзакции [{}] - {} || Причина - {} || timestamp - {} || User id - {} || amount - {}", transactionId, Status.REJECTED, cause, failedAt, userId, amount);
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.transaction-handled}",
+            groupId = "transaction_service",
+            containerFactory = "transactionHandledEventContainerFactory"
+    )
+    private void handleTransactionHandledEvent(ConsumerRecord<UUID, TransactionHandledEvent> record) {
+        TransactionHandledEvent model = record.value();
+        UUID transactionId = model.getTransactionId();
+        Long userId = model.getUserId();
+
+        transactionService.updateStatus(Status.PROCESSED, transactionId);
+        log.info("Transaction {} for user {} successfully handled!", transactionId, userId);
     }
 }

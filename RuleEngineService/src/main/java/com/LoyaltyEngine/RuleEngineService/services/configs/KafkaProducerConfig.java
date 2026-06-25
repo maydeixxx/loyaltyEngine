@@ -1,7 +1,6 @@
 package com.LoyaltyEngine.RuleEngineService.services.configs;
 
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
-import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEventModel;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,7 +41,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public ProducerFactory<UUID, TransactionCreatedEventModel> dlqProducerFactory() {
+    public ProducerFactory<UUID, Object> dlqProducerFactory() {
         Map<String, Object> props = new HashMap<>();
 
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -57,7 +56,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<UUID, TransactionCreatedEventModel> dlqKafkaTemplate() {
+    public KafkaTemplate<UUID, Object> dlqKafkaTemplate() {
         return new KafkaTemplate<>(dlqProducerFactory());
     }
 }

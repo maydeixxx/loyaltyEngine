@@ -14,8 +14,6 @@ import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapp
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +29,6 @@ public class WalletService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
-    @Qualifier("pointsFailedEventKafkaTemplate")
-    private final KafkaTemplate<UUID, PointsFailedEvent> kafkaTemplate;
 
     private Wallet createWallet(Long userId) {
         return walletRepository.save(walletMapper.domainToEntity(WalletDomain.createWallet(userId)));

@@ -32,7 +32,7 @@ public class OutboxEventPublisher {
             return;
         }
 
-        log.info("Найдено {} необработанных событий", events.size());
+        log.info("Found {} not handled events", events.size());
 
         for (OutboxEvent event : events) {
             try {
@@ -47,14 +47,14 @@ public class OutboxEventPublisher {
                                 event.setProcessed(true);
                                 event.setProcessedAt(LocalDateTime.now());
                                 outboxEventRepository.save(event);
-                                log.info("Отправлено сообщение {} в топик {}", event.getId(), topic);
+                                log.info("Message sent {} to  {}", event.getId(), topic);
                             } else {
-                                log.error("Ошибка при отправке сообщения {} в топик {}: {}", event.getId(), event.getEventType().replace(".", "_"), ex.getMessage());
+                                log.error("Error sending message {} to  {}: {}", event.getId(), event.getEventType().replace(".", "_"), ex.getMessage());
                             }
                         }
                 );
             } catch (JacksonException e) {
-                log.error("Ошибка обработки payload: {}", e.getMessage());
+                log.error("Error handling payload: {}", e.getMessage());
             }
         }
     }

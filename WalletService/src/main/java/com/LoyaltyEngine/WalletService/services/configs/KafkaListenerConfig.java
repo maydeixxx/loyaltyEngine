@@ -24,14 +24,16 @@ import java.util.UUID;
 
 @Slf4j
 @Configuration
-@RequiredArgsConstructor
 public class KafkaListenerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
-    @Qualifier("dlqKafkaTemplate")
     private final KafkaTemplate<UUID, Object> dlqKafkaTemplate;
     @Value("${kafka.topics.dlq-suffix}")
     private String dlqSuffix;
+
+    public KafkaListenerConfig(@Qualifier("dlqKafkaTemplate") KafkaTemplate<UUID, Object> dlqKafkaTemplate) {
+        this.dlqKafkaTemplate = dlqKafkaTemplate;
+    }
 
     @Bean
     public ConsumerFactory<UUID, CalculatedCashbackEventModel> calculatedCashbackEventModelConsumerFactory() {
@@ -39,11 +41,12 @@ public class KafkaListenerConfig {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+        props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>()
+                new JacksonJsonDeserializer<>(CalculatedCashbackEventModel.class, false)
         );
     }
 
