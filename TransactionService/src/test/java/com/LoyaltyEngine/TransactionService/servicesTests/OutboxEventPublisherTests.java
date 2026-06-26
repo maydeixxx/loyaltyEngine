@@ -88,7 +88,7 @@ public class OutboxEventPublisherTests {
     @DisplayName("Успешная отправка кафка события")
     void successfulKafkaSend() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("129.43"), items, UUID.randomUUID());
+        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("129.43"), items, UUID.randomUUID(), false);
 
         //when
         Awaitility.await().atMost(7, TimeUnit.SECONDS)

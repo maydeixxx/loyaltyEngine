@@ -24,20 +24,20 @@ public class TransactionController {
 
     @PostMapping()
     public ResponseEntity<TransactionDTO> createTransaction(
-            @RequestHeader(value = "X-IDEMPOTENCY-KEY", required = true) UUID idempotencyKey,
+            @RequestHeader(value = "X-IDEMPOTENCY-KEY") UUID idempotencyKey,
             @RequestBody @Valid CreateTransaction transaction
     ) {
         log.info(
                 "Creating transaction for user: {}, amount: {}, items: {}",
-                transaction.getUserId(), transaction.getAmount(), transaction.getItems()
+                transaction.userId(), transaction.amount(), transaction.items()
         );
 
-        List<TransactionItemDomain> domainItems = transaction.getItems().stream()
+        List<TransactionItemDomain> domainItems = transaction.items().stream()
                 .map(transactionMapper::createTransactionItemDtoToDomain)
                 .toList();
         TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(
                 transactionService.createTransaction(
-                        transaction.getUserId(), transaction.getAmount(), domainItems, idempotencyKey
+                        transaction.userId(), transaction.amount(), domainItems, idempotencyKey, transaction.useCashbackBalance()
                 )
         );
         log.info("Transaction created successfully with id: {}", savedTransaction.getId());

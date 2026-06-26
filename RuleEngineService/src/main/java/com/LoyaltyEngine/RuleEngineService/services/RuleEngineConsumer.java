@@ -31,19 +31,25 @@ public class RuleEngineConsumer {
 
         UUID transactionId = record.key();
         Long userId = model.getUserId();
+        BigDecimal amountOfTransaction = model.getAmount();
         BigDecimal cashback = BigDecimal.ZERO;
+        BigDecimal totalItemPrice = BigDecimal.ZERO;
 
         for (TransactionItemEvent item : model.getItems()) {
             BigDecimal itemPrice = item.getPrice();
             BigDecimal percentageForCategory = ruleEngineService.getPercentageForCategory(item.getCategory());
 
+            totalItemPrice = totalItemPrice.add(itemPrice);
             cashback = cashback.add(itemPrice.multiply(percentageForCategory).divide(hundred, 2, RoundingMode.HALF_UP));
         }
 
         CalculatedCashbackEventModel calculatedCashbackModel = CalculatedCashbackEventModel.builder()
                 .transactionId(transactionId)
                 .userId(userId)
+                .amountOfTransaction(amountOfTransaction)
+                .totalItemPrice(totalItemPrice)
                 .amount(cashback)
+                .useCashback(model.getUseCashbackBalance())
                 .build();
 
         ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);

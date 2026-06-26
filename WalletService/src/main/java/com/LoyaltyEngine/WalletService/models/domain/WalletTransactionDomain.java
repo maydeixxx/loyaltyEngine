@@ -2,11 +2,13 @@ package com.LoyaltyEngine.WalletService.models.domain;
 
 import com.LoyaltyEngine.WalletService.exceptions.InvalidArgumentException;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @ToString
 @EqualsAndHashCode
 @Getter
@@ -31,6 +33,7 @@ public class WalletTransactionDomain {
         }
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            log.info("AMOUNT {}", amount);
             throw new InvalidArgumentException("Amount cant be null or less than zero");
         }
 

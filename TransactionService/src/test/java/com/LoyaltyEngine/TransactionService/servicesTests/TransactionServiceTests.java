@@ -49,7 +49,7 @@ public class TransactionServiceTests {
         UUID idempotencyKey = UUID.randomUUID();
 
         //when
-        TransactionDomain transaction = transactionService.createTransaction(1L, amount, items, idempotencyKey);
+        TransactionDomain transaction = transactionService.createTransaction(1L, amount, items, idempotencyKey, false);
 
         //then
         Assertions.assertEquals(1, transaction.getUserId());
@@ -62,10 +62,10 @@ public class TransactionServiceTests {
     void createTransactionIKPresent() {
         //given
         UUID idempotencyKey = UUID.randomUUID();
-        transactionService.createTransaction(1L, new BigDecimal("102.2"), items, idempotencyKey);
+        transactionService.createTransaction(1L, new BigDecimal("102.2"), items, idempotencyKey, false);
 
         //when
-        TransactionDomain secondTransaction = transactionService.createTransaction(2L, new BigDecimal("103.2"), items, idempotencyKey);
+        TransactionDomain secondTransaction = transactionService.createTransaction(2L, new BigDecimal("103.2"), items, idempotencyKey, false);
 
         //then
         Assertions.assertEquals(1L, secondTransaction.getUserId());
@@ -76,7 +76,7 @@ public class TransactionServiceTests {
     @DisplayName("Успешный поиск транзакции по id")
     void findTransactionByIdSuccess() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID());
+        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID(), false);
         UUID id = transaction.getId();
 
         //when
@@ -103,7 +103,7 @@ public class TransactionServiceTests {
     @DisplayName("Поиск транзакции по userId")
     void findTransactionByUserId() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID());
+        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID(), false);
 
         //when
         TransactionDomain transactionByUserId = transactionService.getTransactionByUserId(1L).getFirst();

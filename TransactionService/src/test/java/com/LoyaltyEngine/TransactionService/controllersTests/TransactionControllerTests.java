@@ -67,7 +67,7 @@ public class TransactionControllerTests {
     @DisplayName("Успешное создание транзакции")
     void successfulTransactionCreating() throws Exception {
         //given
-        CreateTransaction createTransaction = new CreateTransaction(1L, new BigDecimal("101.2"), items);
+        CreateTransaction createTransaction = new CreateTransaction(1L, new BigDecimal("101.2"), items, false);
         UUID idempotencyKey = UUID.randomUUID();
 
         //when && then
@@ -86,8 +86,8 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с уже существующим IK")
     void createTransactionWithExistingIK() throws Exception {
         //given
-        CreateTransaction firstTransaction = new CreateTransaction(1L, new BigDecimal("121.2"), items);
-        CreateTransaction secondTransaction = new CreateTransaction(2L, new BigDecimal("754.2"), items);
+        CreateTransaction firstTransaction = new CreateTransaction(1L, new BigDecimal("121.2"), items, false);
+        CreateTransaction secondTransaction = new CreateTransaction(2L, new BigDecimal("754.2"), items, false);
         UUID idempotencyKey = UUID.randomUUID();
 
         //when && then
@@ -113,7 +113,7 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с невалидным id пользователя")
     void createTransactionWithNotValidUserId() throws Exception {
         //given
-        CreateTransaction transaction = new CreateTransaction(0L, new BigDecimal("493.2"), items);
+        CreateTransaction transaction = new CreateTransaction(0L, new BigDecimal("493.2"), items, false);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
@@ -129,7 +129,7 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с невалидным amount")
     void createTransactionWithNotValidAmount() throws Exception {
         //given
-        CreateTransaction transaction = new CreateTransaction(1L, new BigDecimal("0"), items);
+        CreateTransaction transaction = new CreateTransaction(1L, new BigDecimal("0"), items, false);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
@@ -145,7 +145,7 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с невалидным items")
     void createTransactionWithNotValidItems() throws Exception {
         //given
-        CreateTransaction transaction = new CreateTransaction(1L, new BigDecimal("0"), List.of());
+        CreateTransaction transaction = new CreateTransaction(1L, new BigDecimal("0"), List.of(), false);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
@@ -165,7 +165,7 @@ public class TransactionControllerTests {
                 .map(transactionItem -> TransactionItemDomain.createTransactionItem(transactionItem.getCategory(), transactionItem.getName(), transactionItem.getPrice()))
                 .toList();
 
-        UUID id = service.createTransaction(1L, new BigDecimal("123.2"), domainItems, UUID.randomUUID()).getId();
+        UUID id = service.createTransaction(1L, new BigDecimal("123.2"), domainItems, UUID.randomUUID(), false).getId();
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/transactions/{id}", id))
@@ -191,9 +191,9 @@ public class TransactionControllerTests {
                 .map(transactionItem -> TransactionItemDomain.createTransactionItem(transactionItem.getCategory(), transactionItem.getName(), transactionItem.getPrice()))
                 .toList();
 
-        service.createTransaction(1L, new BigDecimal("123.2"), domainItems, UUID.randomUUID());
-        service.createTransaction(1L, new BigDecimal("127.2"), domainItems, UUID.randomUUID());
-        service.createTransaction(2L, new BigDecimal("163.2"), domainItems, UUID.randomUUID());
+        service.createTransaction(1L, new BigDecimal("123.2"), domainItems, UUID.randomUUID(), false);
+        service.createTransaction(1L, new BigDecimal("127.2"), domainItems, UUID.randomUUID(), false);
+        service.createTransaction(2L, new BigDecimal("163.2"), domainItems, UUID.randomUUID(), false);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/transactions/user/{userId}", 1L))

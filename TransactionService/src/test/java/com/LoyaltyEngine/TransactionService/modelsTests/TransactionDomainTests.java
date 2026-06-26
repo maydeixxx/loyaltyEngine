@@ -25,7 +25,7 @@ public class TransactionDomainTests {
         );
 
         //when
-        TransactionDomain transactionDomain = TransactionDomain.create(userId, idempotencyKey, amount, items);
+        TransactionDomain transactionDomain = TransactionDomain.create(userId, idempotencyKey, amount, items, false);
 
         //then
         Assertions.assertEquals(userId, transactionDomain.getUserId());
@@ -44,7 +44,7 @@ public class TransactionDomainTests {
                 );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(null, idempotencyKey, amount, items));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(null, idempotencyKey, amount, items, false));
 
         //then
         Assertions.assertEquals("UserId не может быть null", ex.getMessage());
@@ -61,7 +61,7 @@ public class TransactionDomainTests {
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create((long) -1, idempotencyKey, amount, items));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create((long) -1, idempotencyKey, amount, items, false));
 
         //then
         Assertions.assertEquals("UserId не может быть меньше 1", ex.getMessage());
@@ -77,7 +77,7 @@ public class TransactionDomainTests {
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, idempotencyKey, null, items));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, idempotencyKey, null, items, false));
 
         //then
         Assertions.assertEquals("Amount не может быть меньше 0 или равной 0", ex.getMessage());
@@ -94,7 +94,7 @@ public class TransactionDomainTests {
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, null, amount, items));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, null, amount, items, false));
 
         //then
         Assertions.assertEquals("Idempotency key не может быть null", ex.getMessage());
@@ -111,7 +111,7 @@ public class TransactionDomainTests {
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, idempotencyKey, amount, new ArrayList<>()));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, idempotencyKey, amount, new ArrayList<>(), false));
 
         //then
         Assertions.assertEquals("Items не может быть пустым", ex.getMessage());

@@ -20,4 +20,5 @@ public class TransactionCreatedEvent {
     private BigDecimal amount;
     private List<TransactionItemEvent> items;
     private LocalDateTime createdAt;
+    private Boolean useCashbackBalance;
 }

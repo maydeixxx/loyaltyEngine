@@ -1,5 +1,6 @@
 package com.LoyaltyEngine.WalletService.services;
 
+import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
@@ -30,7 +31,7 @@ public class WalletConsumer {
         CalculatedCashbackEventModel model = record.value();
 
         try {
-            walletService.creditPoints(model.getUserId(), transactionId, model.getAmount());
+            walletService.creditPoints(model.getUserId(), transactionId, model.getAmount(), model.getUseCashback(), model.getAmountOfTransaction(), model.getTotalItemPrice());
             ack.acknowledge();
             walletProducer.sendHandledTransaction(transactionId, model.getUserId());
         } catch (WalletBlockedException e) {
@@ -44,9 +45,21 @@ public class WalletConsumer {
 
             walletProducer.sendMessageToPointsFailed(transactionId, pointsFailed);
             ack.acknowledge();
+        } catch (InsufficientFundsException e) {
+            PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
+                    .transactionId(transactionId)
+                    .userId(model.getUserId())
+                    .cause("Insufficient funds")
+                    .amount(model.getAmount())
+                    .failedAt(LocalDateTime.now())
+                    .build();
+
+            walletProducer.sendMessageToPointsFailed(transactionId, pointsFailed);
+            ack.acknowledge();
         } catch (Exception e) {
             log.error("Error processing cashback for transaction {} : {}", transactionId, e.getMessage());
             throw e;
         }
+
     }
 }

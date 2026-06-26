@@ -13,5 +13,8 @@ import java.util.UUID;
 public class CalculatedCashbackEventModel {
     private UUID transactionId;
     private Long userId;
+    private BigDecimal amountOfTransaction;
+    private BigDecimal totalItemPrice;
     private BigDecimal amount;
+    private Boolean useCashback;
 }

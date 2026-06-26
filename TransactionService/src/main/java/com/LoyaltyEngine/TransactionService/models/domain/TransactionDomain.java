@@ -20,25 +20,26 @@ public class TransactionDomain {
     private final List<TransactionItemDomain> items;
     private final LocalDateTime createdAt;
     private final Status status;
+    private final Boolean useCashbackBalance;
 
-    public static TransactionDomain create(Long userId, UUID idempotencyKey, BigDecimal amount, List<TransactionItemDomain> items) {
+    public static TransactionDomain create(Long userId, UUID idempotencyKey, BigDecimal amount, List<TransactionItemDomain> items, Boolean useCashbackBalance) {
         if (userId == null) {
-            throw new IllegalArgumentException("UserId не может быть null");
+            throw new IllegalArgumentException("User id cant be null");
         }
         if (userId < 1) {
-            throw new IllegalArgumentException("UserId не может быть меньше 1");
+            throw new IllegalArgumentException("User id cant be less than 1");
         }
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount не может быть меньше 0 или равной 0");
+            throw new IllegalArgumentException("Amount of the trans. cant be null");
         }
 
         if (idempotencyKey == null) {
-            throw new IllegalArgumentException("Idempotency key не может быть null");
+            throw new IllegalArgumentException("Idempotency key cant be null");
         }
 
         if (items.isEmpty()) {
-            throw new IllegalArgumentException("Items не может быть пустым");
+            throw new IllegalArgumentException("Items size must be >= 1");
         }
 
         BigDecimal totalSum = items.stream()
@@ -46,9 +47,13 @@ public class TransactionDomain {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (amount.compareTo(totalSum) > 0) {
-            throw new IllegalArgumentException("Сумма транзакции не может превышать итоговую сумму товаров");
+            throw new IllegalArgumentException("Sum of the trans. cant be greater than amount of items");
         }
 
-        return new TransactionDomain(userId, idempotencyKey, amount, items, LocalDateTime.now(), Status.NEW);
+        if (!useCashbackBalance && (amount.compareTo(totalSum) < 0)) {
+            throw new IllegalArgumentException("Insufficient funds");
+        }
+
+        return new TransactionDomain(userId, idempotencyKey, amount, items, LocalDateTime.now(), Status.NEW, useCashbackBalance);
     }
 }

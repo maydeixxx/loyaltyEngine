@@ -1,5 +1,6 @@
 package com.LoyaltyEngine.WalletService.services;
 
+import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
 import com.LoyaltyEngine.WalletService.models.domain.TransactionType;
@@ -7,6 +8,7 @@ import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.entity.Wallet;
+import com.LoyaltyEngine.WalletService.models.entity.WalletTransaction;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
@@ -35,7 +37,7 @@ public class WalletService {
     }
 
     @Transactional
-    public void creditPoints(Long userId, UUID transactionId, BigDecimal amount) {
+    public void creditPoints(Long userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) {
         Wallet wallet = walletRepository
                 .findWalletByUserId(userId)
                 .orElseGet(() -> createWallet(userId));
@@ -44,8 +46,42 @@ public class WalletService {
             throw new WalletBlockedException(String.format("Wallet %s blocked.", wallet.getId()));
         }
 
-        LocalDateTime timestamp = LocalDateTime.now();
+        if (useCashback) {
+            BigDecimal cashbackToUse = totalItemPrice.subtract(amountOfTransaction);
+            BigDecimal balance = wallet.getBalance();
 
+            BigDecimal actualCashback;
+            if (balance.compareTo(cashbackToUse) < 0) {
+                BigDecimal itemsPriceAfterCashback = totalItemPrice.subtract(balance);
+                if (itemsPriceAfterCashback.compareTo(amountOfTransaction) > 0) {
+                    throw new InsufficientFundsException("Insufficient funds");
+                }
+                actualCashback = balance;
+            } else {
+                actualCashback = cashbackToUse;
+            }
+
+            LocalDateTime redeemTimeStamp = LocalDateTime.now();
+            wallet.setBalance(wallet.getBalance().subtract(actualCashback));
+            wallet.setUpdatedAt(redeemTimeStamp);
+
+            WalletTransactionDomain redeemCashback = WalletTransactionDomain.createWalletTransaction(
+                    wallet.getId(),
+                    transactionId,
+                    balance.subtract(actualCashback),
+                    TransactionType.DEBIT,
+                    redeemTimeStamp,
+                    "Redeem cashback"
+            );
+
+            walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
+        } else {
+            if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
+                throw new InsufficientFundsException("Insufficient funds");
+            }
+        }
+
+        LocalDateTime timestamp = LocalDateTime.now();
         wallet.setBalance(wallet.getBalance().add(amount));
         wallet.setUpdatedAt(timestamp);
 
