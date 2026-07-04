@@ -32,7 +32,7 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 email = jwtService.getEmailFromToken(jwt);
             } catch (Exception e) {
-                throw new JwtCheckingException(String.format("Error checking jwt: {}", e.getMessage()));
+                throw new JwtCheckingException(String.format("Error checking jwt: %s", e.getMessage()));
             }
         }
 
