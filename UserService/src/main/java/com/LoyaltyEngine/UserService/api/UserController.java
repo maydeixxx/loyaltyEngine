@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -105,12 +104,9 @@ public class UserController {
         }
     }
 
-    @GetMapping("/auth")
+    @PostMapping("/auth")
     public ResponseEntity<String> authenticate(@RequestBody AuthUserDto userDto) {
-        String email = userDto.getEmail();
-        String password = userDto.getPassword();
         String jwtToken = userService.authUser(userDto);
-
         return ResponseEntity.ok(jwtToken);
     }
 }

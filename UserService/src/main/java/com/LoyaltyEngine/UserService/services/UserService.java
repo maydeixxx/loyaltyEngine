@@ -46,13 +46,8 @@ public class UserService {
 
     @Transactional
     public void deleteUser(String email) {
-        try {
-            User user = userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
-            userRepository.delete(user);
-        } catch (Exception e) {
-            log.error("ERROR DELETING USER");
-            throw new DeleteUserException(String.format("Error deleting user by email [%s]: %s", email, e.getMessage()));
-        }
+        User user = userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
+        userRepository.delete(user);
     }
 
     public UserDomain findUserById(Long id) {
@@ -87,7 +82,7 @@ public class UserService {
         }
 
         if (updateUserDTO.getPassword() != null) {
-            user.setPassword(updateUserDTO.getPassword());
+            user.setPassword(passwordEncoder.encode(updateUserDTO.getPassword()));
         }
 
         user.setUpdatedAt(LocalDateTime.now());
@@ -107,8 +102,7 @@ public class UserService {
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new AuthenticationException("Password is incorrect");
-        } else {
-            return jwtService.generateJwtToken(user);
         }
+        return jwtService.generateJwtToken(user);
     }
 }

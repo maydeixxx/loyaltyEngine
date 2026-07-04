@@ -68,7 +68,7 @@ public class WalletService {
             WalletTransactionDomain redeemCashback = WalletTransactionDomain.createWalletTransaction(
                     wallet.getId(),
                     transactionId,
-                    balance.subtract(actualCashback),
+                    actualCashback,
                     TransactionType.DEBIT,
                     redeemTimeStamp,
                     "Redeem cashback"
