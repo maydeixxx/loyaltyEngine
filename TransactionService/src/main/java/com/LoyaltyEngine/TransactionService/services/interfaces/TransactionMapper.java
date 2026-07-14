@@ -16,6 +16,7 @@ public interface TransactionMapper {
     Transaction transactionDomainToEntity(TransactionDomain domain);
 
     @Mapping(target = "items", source = "transactionItems")
+    @Mapping(target = "useCashbackBalance", ignore = true)
     TransactionDomain transactionEntityToDomain(Transaction entity);
 
     TransactionDTO transactionDomainToDTO(TransactionDomain transactionDomain);
