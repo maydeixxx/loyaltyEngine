@@ -11,7 +11,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -27,8 +26,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity security) {
-        DefaultSecurityFilterChain filterChain = security.csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(request -> {
+        return security.csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(_ -> {
                     var corsConfiguration = new CorsConfiguration();
                     corsConfiguration.setAllowedHeaders(List.of("Authorization"));
                     corsConfiguration.setAllowedMethods(List.of("GET", "PUT", "DELETE", "POST"));
@@ -45,8 +44,6 @@ public class SecurityConfig {
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
-
-        return filterChain;
     }
 
     @Bean

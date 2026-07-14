@@ -14,13 +14,16 @@ import java.util.UUID;
 public class WalletProducer {
     private final KafkaTemplate<UUID, PointsFailedEvent> kafkaTemplatePointsFailed;
     private final KafkaTemplate<UUID, TransactionHandledEvent> transactionHandledEventKafkaTemplate;
+    private final KafkaTemplate<UUID, Long> userRequestKafkaTemplate;
 
     public WalletProducer(
             @Qualifier("pointsFailedEventKafkaTemplate") KafkaTemplate<UUID, PointsFailedEvent> kafkaTemplatePointsFailed,
-            @Qualifier("transactionHandledEventKafkaTemplate") KafkaTemplate<UUID, TransactionHandledEvent> transactionHandledEventKafkaTemplate
+            @Qualifier("transactionHandledEventKafkaTemplate") KafkaTemplate<UUID, TransactionHandledEvent> transactionHandledEventKafkaTemplate,
+            @Qualifier("userRequestEventModelKafkaTemplate") KafkaTemplate<UUID, Long> userRequestKafkaTemplate
     ) {
         this.kafkaTemplatePointsFailed = kafkaTemplatePointsFailed;
         this.transactionHandledEventKafkaTemplate = transactionHandledEventKafkaTemplate;
+        this.userRequestKafkaTemplate = userRequestKafkaTemplate;
     }
 
     public void sendMessageToPointsFailed(UUID transactionId, PointsFailedEvent event) {
@@ -55,5 +58,9 @@ public class WalletProducer {
                     }
                 }
         );
+    }
+
+    public void sendUserRequest(UUID requestKey, Long userId) {
+        userRequestKafkaTemplate.send("get_user_status", requestKey, userId);
     }
 }

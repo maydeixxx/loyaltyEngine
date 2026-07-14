@@ -2,7 +2,6 @@ package com.LoyaltyEngine.UserService.services;
 
 import com.LoyaltyEngine.UserService.exceptions.AuthenticationException;
 import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
-import com.LoyaltyEngine.UserService.exceptions.DeleteUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
 import com.LoyaltyEngine.UserService.models.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
