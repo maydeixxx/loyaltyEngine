@@ -110,7 +110,7 @@ public class WalletConsumer {
     @KafkaListener(
             topics = "response_user_status",
             groupId = "wallet_service",
-            containerFactory = "userResponseEventModel"
+            containerFactory = "userResponseEventModelConcurrentKafkaListenerContainerFactory"
     )
     public void handleUserStatusResponse(ConsumerRecord<UUID, UserResponseEventModel> record) {
         UUID requestKey = record.key();

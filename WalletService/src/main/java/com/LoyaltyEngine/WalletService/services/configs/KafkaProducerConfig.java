@@ -2,7 +2,6 @@ package com.LoyaltyEngine.WalletService.services.configs;
 
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import com.LoyaltyEngine.WalletService.models.events.TransactionHandledEvent;
-import com.LoyaltyEngine.WalletService.models.events.UserResponseEventModel;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.UUIDSerializer;

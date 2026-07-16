@@ -61,6 +61,14 @@ public class WalletProducer {
     }
 
     public void sendUserRequest(UUID requestKey, Long userId) {
-        userRequestKafkaTemplate.send("get_user_status", requestKey, userId);
+        userRequestKafkaTemplate.send("get_user_status", requestKey, userId).whenComplete(
+                (_, ex) -> {
+                    if (ex != null) {
+                        log.error("Error sending userRequest: {}", ex.getMessage());
+                    } else {
+                        log.info("Message successfully sent to get_user_status");
+                    }
+                }
+        );
     }
 }

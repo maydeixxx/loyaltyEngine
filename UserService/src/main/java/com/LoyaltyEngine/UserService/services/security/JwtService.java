@@ -28,6 +28,7 @@ public class JwtService {
     public String generateJwtToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", "ROLE_" + user.getRole());
+        claims.put("userId", user.getId());
 
         Date issuedAt = new Date();
         Date expireTime = new Date(issuedAt.getTime() + lifetime.toMillis());

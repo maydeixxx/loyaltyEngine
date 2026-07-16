@@ -123,4 +123,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(500).body(errorResponse);
     }
 
+    @ExceptionHandler(UserUpdateException.class)
+    public ResponseEntity<ErrorResponse> userUpdateExceptionHandler(Exception ex, WebRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(400)
+                .error("error updating user")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(400).body(errorResponse);
+    }
+
 }

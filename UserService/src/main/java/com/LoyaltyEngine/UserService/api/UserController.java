@@ -27,6 +27,12 @@ public class UserController {
         return ResponseEntity.status(201).body(createdUser);
     }
 
+    @PostMapping("/auth")
+    public ResponseEntity<String> authenticate(@RequestBody AuthUserDto userDto) {
+        String jwtToken = userService.authUser(userDto);
+        return ResponseEntity.ok(jwtToken);
+    }
+
     @GetMapping("/get_all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
@@ -38,7 +44,7 @@ public class UserController {
         return ResponseEntity.ok(usersList);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         UserDTO user = userMapper.domainToDto(userService.findUserById(id));
@@ -46,7 +52,6 @@ public class UserController {
     }
 
     @GetMapping()
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDTO> getSelf() {
         String email = SecurityContextHolder.getContext()
                 .getAuthentication()
@@ -58,7 +63,6 @@ public class UserController {
     }
 
     @DeleteMapping("/{email}")
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> deleteUser(@PathVariable String email) {
         String authenticatedEmail = SecurityContextHolder.getContext()
                 .getAuthentication()
@@ -81,7 +85,7 @@ public class UserController {
         }
     }
 
-    @PutMapping("/update/{email}")
+    @PutMapping("/{email}")
     public ResponseEntity<?> updateUser(@PathVariable String email, @RequestBody UpdateUserDTO userDTO) {
         String authenticatedEmail = SecurityContextHolder.getContext()
                 .getAuthentication()
@@ -102,11 +106,5 @@ public class UserController {
         } else {
             return ResponseEntity.badRequest().body("You cant update this user");
         }
-    }
-
-    @PostMapping("/auth")
-    public ResponseEntity<String> authenticate(@RequestBody AuthUserDto userDto) {
-        String jwtToken = userService.authUser(userDto);
-        return ResponseEntity.ok(jwtToken);
     }
 }

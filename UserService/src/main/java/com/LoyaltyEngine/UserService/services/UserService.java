@@ -3,23 +3,31 @@ package com.LoyaltyEngine.UserService.services;
 import com.LoyaltyEngine.UserService.exceptions.AuthenticationException;
 import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
+import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.models.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
+import com.LoyaltyEngine.UserService.models.eventModels.UserResponseEventModel;
 import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
 import com.LoyaltyEngine.UserService.services.security.JwtService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -69,6 +77,13 @@ public class UserService {
         User user = userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
 
         if (updateUserDTO.getEmail() != null) {
+            if (updateUserDTO.getEmail().equals(user.getEmail())) {
+                throw new UserUpdateException("You cant set email that you already have");
+            }
+            Optional<User> userByEmail = userRepository.findUserByEmail(updateUserDTO.getEmail());
+            if (userByEmail.isPresent()) {
+                throw new UserUpdateException("User with this email already exists");
+            }
             user.setEmail(updateUserDTO.getEmail());
         }
 
