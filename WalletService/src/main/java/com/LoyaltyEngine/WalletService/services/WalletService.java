@@ -38,6 +38,7 @@ public class WalletService {
 
     @Transactional
     public void creditPoints(Long userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) {
+        Boolean cashbackProcessed = false;
         Wallet wallet = walletRepository
                 .findWalletByUserId(userId)
                 .orElseGet(() -> createWallet(userId));
@@ -46,9 +47,9 @@ public class WalletService {
             throw new WalletBlockedException(String.format("Wallet %s blocked.", wallet.getId()));
         }
 
-        if (useCashback) {
+        BigDecimal balance = wallet.getBalance();
+        if (useCashback && balance.compareTo(new BigDecimal("0.00")) > 0) {
             BigDecimal cashbackToUse = totalItemPrice.subtract(amountOfTransaction);
-            BigDecimal balance = wallet.getBalance();
 
             BigDecimal actualCashback;
             if (balance.compareTo(cashbackToUse) < 0) {
@@ -73,30 +74,31 @@ public class WalletService {
                     redeemTimeStamp,
                     "Redeem cashback"
             );
-
             walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
+            cashbackProcessed = true;
         } else {
             if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
                 throw new InsufficientFundsException("Insufficient funds");
             }
         }
 
-        LocalDateTime timestamp = LocalDateTime.now();
-        wallet.setBalance(wallet.getBalance().add(amount));
-        wallet.setUpdatedAt(timestamp);
+        if (!cashbackProcessed) {
+            LocalDateTime timestamp = LocalDateTime.now();
+            wallet.setBalance(wallet.getBalance().add(amount));
+            wallet.setUpdatedAt(timestamp);
 
-        WalletTransactionDomain walletTransaction = WalletTransactionDomain.createWalletTransaction(
-                wallet.getId(),
-                transactionId,
-                amount,
-                TransactionType.CREDIT,
-                timestamp,
-                "Cashback from transaction " + transactionId
-        );
+            WalletTransactionDomain walletTransaction = WalletTransactionDomain.createWalletTransaction(
+                    wallet.getId(),
+                    transactionId,
+                    amount,
+                    TransactionType.CREDIT,
+                    timestamp,
+                    "Cashback from transaction " + transactionId
+            );
 
-        walletTransactionRepository.save(walletTransactionMapper.domainToEntity(walletTransaction));
-
-        log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amount);
+            walletTransactionRepository.save(walletTransactionMapper.domainToEntity(walletTransaction));
+            log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amount);
+        }
     }
 
     @Transactional

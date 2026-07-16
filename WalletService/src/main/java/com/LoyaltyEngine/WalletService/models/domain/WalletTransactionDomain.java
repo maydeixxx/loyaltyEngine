@@ -41,7 +41,7 @@ public class WalletTransactionDomain {
             throw new InvalidArgumentException("Type cant be null");
         }
 
-        if (createdAt == null || createdAt.isBefore(LocalDateTime.now())) {
+        if (createdAt == null) {
             throw new InvalidArgumentException("Created time cant be null or before than present time");
         }
 

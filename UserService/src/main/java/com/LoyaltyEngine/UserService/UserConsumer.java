@@ -10,11 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
+@Service
 public class UserConsumer {
     private final UserRepository userRepository;
     private final KafkaTemplate<UUID, UserResponseEventModel> userResponseEventModelKafkaTemplate;
@@ -30,7 +32,7 @@ public class UserConsumer {
     }
 
     @KafkaListener(
-            topics = "${kafka.topics.get-user-status}",
+            topics = "get_user_status",
             groupId = "user_service",
             containerFactory = "longConcurrentKafkaListenerContainerFactory"
     )

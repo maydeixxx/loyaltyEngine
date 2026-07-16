@@ -99,7 +99,7 @@ public class KafkaProducerConfig {
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 15000);
         props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUID.class);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
 
         return new DefaultKafkaProducerFactory<>(

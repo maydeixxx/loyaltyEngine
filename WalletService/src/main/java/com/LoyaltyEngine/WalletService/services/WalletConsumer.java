@@ -46,7 +46,7 @@ public class WalletConsumer {
         walletProducer.sendUserRequest(requestKey, userId);
 
         try {
-            UserStatus userStatus = userEventModel.get(5, TimeUnit.SECONDS).getUserStatus();
+            UserStatus userStatus = userEventModel.get(15, TimeUnit.SECONDS).getUserStatus();
             if (userStatus == UserStatus.NOT_FOUND) {
                 log.error("User not found");
                 requests.remove(requestKey);

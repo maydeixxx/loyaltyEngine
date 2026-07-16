@@ -30,6 +30,7 @@ public class UserProducerConfig {
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        props.put(JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false);
 
         return new DefaultKafkaProducerFactory<>(
                 props,
@@ -53,6 +54,7 @@ public class UserProducerConfig {
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        props.put(JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false);
 
         return new DefaultKafkaProducerFactory<>(
                 props,

@@ -2,6 +2,7 @@ package com.LoyaltyEngine.UserService.services.configs;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,13 +37,13 @@ public class UserConsumerConfig {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class);
         props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>()
+                new LongDeserializer()
         );
     }
 

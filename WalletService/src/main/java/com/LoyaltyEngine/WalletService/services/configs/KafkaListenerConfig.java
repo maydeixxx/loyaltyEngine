@@ -72,7 +72,7 @@ public class KafkaListenerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>()
+                new JacksonJsonDeserializer<>(UserResponseEventModel.class, false)
         );
     }
 
