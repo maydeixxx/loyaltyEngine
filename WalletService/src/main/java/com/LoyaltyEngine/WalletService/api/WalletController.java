@@ -5,10 +5,7 @@ import com.LoyaltyEngine.WalletService.services.WalletService;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,5 +30,17 @@ public class WalletController {
                 .toList();
 
         return ResponseEntity.ok().body(walletTransactions);
+    }
+
+    @PutMapping("/block")
+    public ResponseEntity<Void> blockWallet(@RequestBody Long userId) {
+        walletService.blockWallet(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/unblock")
+    public ResponseEntity<Void> unblockWallet(@RequestBody Long userId) {
+        walletService.unblockWallet(userId);
+        return ResponseEntity.ok().build();
     }
 }
