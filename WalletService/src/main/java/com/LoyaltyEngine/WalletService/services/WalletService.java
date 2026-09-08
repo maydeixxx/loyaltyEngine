@@ -8,7 +8,6 @@ import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.entity.Wallet;
-import com.LoyaltyEngine.WalletService.models.entity.WalletTransaction;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;

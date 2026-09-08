@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.UserService;
+package com.LoyaltyEngine.UserService.services;
 
 import com.LoyaltyEngine.UserService.models.User;
 import com.LoyaltyEngine.UserService.models.domain.UserStatus;

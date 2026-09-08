@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(nullable = false, unique = true, updatable = false)
     private Long id;
 
     @Column(nullable = false)
@@ -30,17 +30,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }
