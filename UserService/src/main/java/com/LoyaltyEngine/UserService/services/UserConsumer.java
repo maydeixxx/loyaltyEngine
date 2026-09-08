@@ -1,7 +1,7 @@
 package com.LoyaltyEngine.UserService.services;
 
 import com.LoyaltyEngine.UserService.models.User;
-import com.LoyaltyEngine.UserService.models.domain.UserStatus;
+import com.LoyaltyEngine.UserService.models.domain.enums.UserStatus;
 import com.LoyaltyEngine.UserService.models.eventModels.UserResponseEventModel;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
 import lombok.extern.slf4j.Slf4j;

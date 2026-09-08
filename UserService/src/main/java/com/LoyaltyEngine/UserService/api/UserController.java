@@ -29,7 +29,7 @@ public class UserController {
 
     @PostMapping("/auth")
     public ResponseEntity<String> authenticate(@RequestBody AuthUserDto userDto) {
-        String jwtToken = userService.authUser(userDto);
+        String jwtToken = userService.login(userDto);
         return ResponseEntity.ok(jwtToken);
     }
 

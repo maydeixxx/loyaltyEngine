@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.UserService.models;
 
-import com.LoyaltyEngine.UserService.models.domain.Role;
+import com.LoyaltyEngine.UserService.models.domain.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 

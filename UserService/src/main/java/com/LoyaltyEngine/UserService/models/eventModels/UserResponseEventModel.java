@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.UserService.models.eventModels;
 
-import com.LoyaltyEngine.UserService.models.domain.UserStatus;
+import com.LoyaltyEngine.UserService.models.domain.enums.UserStatus;
 import lombok.Builder;
 import lombok.Data;
 
