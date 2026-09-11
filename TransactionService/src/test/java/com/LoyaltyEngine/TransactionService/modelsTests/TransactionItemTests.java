@@ -6,8 +6,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 public class TransactionItemTests {
+
+    private static final Currency currency = Currency.getInstance("USD");
 
     @Test
     @DisplayName("Успешное создание TransactionItemDomain с валидными данным")
@@ -18,12 +21,13 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("102.2");
 
         //when
-        TransactionItemDomain transactionItem = TransactionItemDomain.createTransactionItem(category, name, price);
+        TransactionItemDomain transactionItem = TransactionItemDomain.createTransactionItem(category, name, price, currency);
 
         //then
         Assertions.assertEquals(category, transactionItem.getCategory());
         Assertions.assertEquals(name, transactionItem.getName());
-        Assertions.assertEquals(price, transactionItem.getPrice());
+        Assertions.assertEquals(new BigDecimal("102.20"), transactionItem.getPrice().amount());
+        Assertions.assertEquals(currency, transactionItem.getPrice().currency());
     }
 
     @Test
@@ -35,7 +39,7 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("1.02");
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price, currency));
 
         Assertions.assertEquals("Category не может быть пустым", ex.getMessage());
     }
@@ -49,7 +53,7 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("1.02");
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price, currency));
 
         Assertions.assertEquals("Name не может быть пустым", ex.getMessage());
     }
@@ -63,9 +67,9 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("-1.02");
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price, currency));
 
-        Assertions.assertEquals("Price не может быть <= 0 или null", ex.getMessage());
+        Assertions.assertEquals("Amount cant be negative", ex.getMessage());
     }
 
 }

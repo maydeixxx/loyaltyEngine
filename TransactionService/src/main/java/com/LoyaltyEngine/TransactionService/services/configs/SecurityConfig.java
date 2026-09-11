@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -25,11 +26,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity security) {
-        return security.csrf(csrf -> csrf.disable())
+        return security.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(_ -> {
                     var corsConfiguration = new CorsConfiguration();
                     corsConfiguration.setAllowedMethods(List.of("GET", "POST"));
-                    corsConfiguration.setAllowedHeaders(List.of("Authorization"));
+                    corsConfiguration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-IDEMPOTENCY-KEY"));
                     corsConfiguration.setAllowedOrigins(List.of("*"));
                     corsConfiguration.setAllowCredentials(false);
                     return corsConfiguration;
@@ -38,6 +39,7 @@ public class SecurityConfig {
                     request.requestMatchers("/api/v1/transactions").authenticated();
                     request.requestMatchers("/api/v1/transactions/**").authenticated();
                     request.requestMatchers("/api/v1/transactions/user/").authenticated();
+                    request.anyRequest().permitAll();
                 })
                 .sessionManagement(manage -> manage.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

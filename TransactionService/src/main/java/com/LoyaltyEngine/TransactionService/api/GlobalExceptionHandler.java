@@ -62,13 +62,13 @@ public class GlobalExceptionHandler {
     }
 
     private ErrorResponseDTO buildResponse(String error, Map<String, String> errors, String message, int status, WebRequest request) {
-        return ErrorResponseDTO.builder()
-                .error(error)
-                .errors(errors)
-                .message(message)
-                .status(status)
-                .path(request.getDescription(false).replace("uri=", ""))
-                .timestamp(LocalDateTime.now())
-                .build();
+        return new ErrorResponseDTO(
+                error,
+                errors,
+                message,
+                status,
+                request.getDescription(false).replace("uri=", ""),
+                LocalDateTime.now()
+        );
     }
 }

@@ -60,23 +60,23 @@ public interface TransactionMapper {
             items.add(transactionItemDomainToDTO(item));
         }
 
-        return TransactionDTO.builder()
-                .amount(transactionDomain.getAmount().amount())
-                .createdAt(transactionDomain.getCreatedAt())
-                .id(transactionDomain.getId().value())
-                .idempotencyKey(transactionDomain.getIdempotencyKey().value())
-                .items(items)
-                .status(transactionDomain.getStatus())
-                .userId(transactionDomain.getUserId().value())
-                .build();
+        return new TransactionDTO(
+                transactionDomain.getId().value(),
+                transactionDomain.getUserId().value(),
+                transactionDomain.getIdempotencyKey().value(),
+                transactionDomain.getAmount().amount(),
+                items,
+                transactionDomain.getCreatedAt(),
+                transactionDomain.getStatus()
+        );
     }
 
     default TransactionItemDTO transactionItemDomainToDTO(TransactionItemDomain item) {
-        return TransactionItemDTO.builder()
-                .name(item.getName())
-                .price(item.getPrice().amount())
-                .category(item.getCategory())
-                .build();
+        return new TransactionItemDTO(
+                item.getCategory(),
+                item.getName(),
+                item.getPrice().amount()
+        );
     }
 
     default TransactionItem transactionItemDomainToEntity(TransactionItemDomain item, Transaction parent) {
@@ -103,10 +103,10 @@ public interface TransactionMapper {
 
     default TransactionItemDomain transactionItemDtoToDomain(CreateTransactionItem item) {
         return TransactionItemDomain.createTransactionItem(
-                item.getCategory(),
-                item.getName(),
-                item.getPrice(),
-                item.getCurrency()
+                item.category(),
+                item.name(),
+                item.price(),
+                item.currency()
         );
     }
 }

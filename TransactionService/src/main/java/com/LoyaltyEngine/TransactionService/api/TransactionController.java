@@ -40,7 +40,7 @@ public class TransactionController {
                         transaction.userId(), transaction.amount(), transaction.currency(), domainItems, idempotencyKey, transaction.useCashbackBalance()
                 )
         );
-        log.info("Transaction created successfully with id: {}", savedTransaction.getId());
+        log.info("Transaction created successfully with id: {}", savedTransaction.id());
         return ResponseEntity.status(201).body(savedTransaction);
     }
 
