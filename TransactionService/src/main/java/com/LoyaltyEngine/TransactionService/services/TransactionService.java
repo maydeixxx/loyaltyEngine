@@ -3,7 +3,8 @@ package com.LoyaltyEngine.TransactionService.services;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionMappingException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
-import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.enums.OutboxStatus;
+import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
@@ -13,6 +14,7 @@ import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionItemEv
 import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepository;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
+import com.github.f4b6a3.uuid.UuidCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.DataException;
@@ -24,6 +26,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,13 +43,13 @@ public class TransactionService {
     private String transactionCreatedTopic;
 
     @Transactional
-    public TransactionDomain createTransaction(Long userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
+    public TransactionDomain createTransaction(UUID userId, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
         if (transactionByIdempotencyKey.isPresent()) {
             return transactionByIdempotencyKey.get();
         }
 
-        TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, items, useCashback);
+        TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, currency, items, useCashback);
 
         List<TransactionItemEvent> eventItems = items
                 .stream()
@@ -63,6 +66,7 @@ public class TransactionService {
         TransactionCreatedEvent transactionCreated = TransactionCreatedEvent.builder()
                 .userId(userId)
                 .amount(amount)
+                .currency(currency.toString())
                 .createdAt(newTransaction.getCreatedAt())
                 .items(eventItems)
                 .useCashbackBalance(useCashback)
@@ -73,11 +77,12 @@ public class TransactionService {
             transactionCreated.setTransactionId(savedTransaction.getId());
 
             OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
                     .aggregateId(savedTransaction.getId())
                     .createdAt(LocalDateTime.now())
                     .eventType(transactionCreatedTopic)
                     .payload(mapper.writeValueAsString(transactionCreated))
-                    .processed(false)
+                    .status(OutboxStatus.NEW)
                     .build();
             outboxEventRepository.save(outboxEvent);
 
@@ -106,7 +111,7 @@ public class TransactionService {
         }
     }
 
-    public List<TransactionDomain> getTransactionByUserId(Long id) {
+    public List<TransactionDomain> getTransactionByUserId(UUID id) {
         try {
             List<Transaction> transactions = transactionRepository.getTransactionsByUserId(id);
             return transactions

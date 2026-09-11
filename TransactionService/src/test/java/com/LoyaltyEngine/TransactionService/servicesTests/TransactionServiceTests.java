@@ -4,6 +4,7 @@ import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundExcept
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
+import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,10 +104,11 @@ public class TransactionServiceTests {
     @DisplayName("Поиск транзакции по userId")
     void findTransactionByUserId() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID(), false);
+        UUID userid = UuidCreator.getTimeOrderedEpoch();
+        TransactionDomain transaction = transactionService.createTransaction(userid, new BigDecimal("105.1"), items, UUID.randomUUID(), false);
 
         //when
-        TransactionDomain transactionByUserId = transactionService.getTransactionByUserId(1L).getFirst();
+        TransactionDomain transactionByUserId = transactionService.getTransactionByUserId(userid).getFirst();
 
         //then
         Assertions.assertEquals(transaction.getAmount(), transactionByUserId.getAmount());

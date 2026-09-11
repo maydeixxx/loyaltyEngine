@@ -4,6 +4,7 @@ import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.Idempoten
 import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.TransactionId;
 import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.UserId;
+import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -24,7 +25,7 @@ public class TransactionDomain {
     private Status status;
     private final Boolean useCashbackBalance;
 
-    private TransactionDomain(TransactionId id, UserId userId, IdempotencyKey idempotencyKey, Money amount, List<TransactionItemDomain> items, LocalDateTime createdAt, Boolean useCashbackBalance) {
+    private TransactionDomain(TransactionId id, UserId userId, IdempotencyKey idempotencyKey, Money amount, List<TransactionItemDomain> items, LocalDateTime createdAt, Status status, Boolean useCashbackBalance) {
         if (items.isEmpty()) {
             throw new IllegalArgumentException("Items size must be >= 1");
         }
@@ -35,14 +36,15 @@ public class TransactionDomain {
         this.amount = amount;
         this.items = items;
         this.createdAt = createdAt;
-        this.status = Status.NEW;
+        this.status = status;
         this.useCashbackBalance = useCashbackBalance;
     }
 
-    public static TransactionDomain create(UserId userId, UUID rawIdempotencyKey, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, Boolean useCashbackBalance) {
+    public static TransactionDomain create(UUID rawUserId, UUID rawIdempotencyKey, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, Boolean useCashbackBalance) {
         Money transactionAmount = Money.of(amount, currency);
         Money totalSum = new Money(BigDecimal.ZERO, currency);
         IdempotencyKey idempotencyKey = new IdempotencyKey(rawIdempotencyKey);
+        UserId userId = new UserId(rawUserId);
 
         for (TransactionItemDomain item : items) {
             totalSum = totalSum.add(item.getPrice());
@@ -57,16 +59,20 @@ public class TransactionDomain {
         }
 
         TransactionId transactionId = TransactionId.generateTransactionId();
-        return new TransactionDomain(transactionId, userId, idempotencyKey, transactionAmount, items, LocalDateTime.now(), useCashbackBalance);
+        return new TransactionDomain(transactionId, userId, idempotencyKey, transactionAmount, items, LocalDateTime.now(), Status.NEW, useCashbackBalance);
     }
 
-    public static TransactionDomain restoreFromExisting(UUID transactionId, UUID userId, UUID idempotencyKey, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, LocalDateTime createdAt, Boolean userCashbackBalance) {
+    public static TransactionDomain restoreFromExisting(UUID transactionId, UUID userId, UUID idempotencyKey, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, LocalDateTime createdAt, Status status, Boolean userCashbackBalance) {
         TransactionId transactionId1 = TransactionId.restoreFromExisting(transactionId);
         UserId userId1 = UserId.restoreFromExisting(userId);
         IdempotencyKey idempotencyKey1 = IdempotencyKey.restoreFromExisting(idempotencyKey);
         Money money = Money.of(amount, currency);
 
-        return new TransactionDomain(transactionId1, userId1, idempotencyKey1, money, items, createdAt, userCashbackBalance);
+        if (status == null) {
+            throw new IllegalArgumentException("Status cant be null");
+        }
+
+        return new TransactionDomain(transactionId1, userId1, idempotencyKey1, money, items, createdAt, status, userCashbackBalance);
     }
 
     public void rejectTransaction() {
@@ -80,11 +86,11 @@ public class TransactionDomain {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof TransactionDomain that)) return false;
-        return Objects.equals(idempotencyKey, that.idempotencyKey);
+        return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(idempotencyKey);
+        return Objects.hashCode(id);
     }
 }

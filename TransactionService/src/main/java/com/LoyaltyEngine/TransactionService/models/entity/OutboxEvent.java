@@ -1,28 +1,45 @@
 package com.LoyaltyEngine.TransactionService.models.entity;
 
+import com.LoyaltyEngine.TransactionService.models.enums.OutboxStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_events")
-@Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
+@Getter
+@Setter
 public class OutboxEvent {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+    @Column(nullable = false)
     private UUID aggregateId;
+
     private String eventType;
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String payload;
+
     private LocalDateTime createdAt;
-    private Boolean processed;
+
+    @Enumerated(EnumType.STRING)
+    private OutboxStatus status;
+    private int retryCount;
     private LocalDateTime processedAt;
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof OutboxEvent that)) return false;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

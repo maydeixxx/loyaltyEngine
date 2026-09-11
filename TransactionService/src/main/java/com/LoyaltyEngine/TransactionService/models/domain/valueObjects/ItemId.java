@@ -15,7 +15,7 @@ public record ItemId(UUID value) {
         return new ItemId(UuidCreator.getTimeOrderedEpoch());
     }
 
-    public ItemId fromString(String value) {
+    public static ItemId fromString(String value) {
         return new ItemId(UUID.fromString(value));
     }
 

@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.TransactionService.models.domain.valueObjects;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Currency;
 import java.util.Objects;
 
@@ -10,6 +11,8 @@ public record Money(BigDecimal amount, Currency currency) {
         Objects.requireNonNull(amount, "Amount cant be null");
         Objects.requireNonNull(currency, "Currency cant be null");
         if (amount.compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException("Amount cant be negative");
+
+        amount = amount.setScale(2, RoundingMode.HALF_EVEN);
     }
 
     public static Money of(BigDecimal amount, Currency currency) {

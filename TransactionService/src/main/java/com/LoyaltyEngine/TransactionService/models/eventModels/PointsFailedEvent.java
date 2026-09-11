@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class PointsFailedEvent {
     private UUID transactionId;
-    private Long userId;
+    private UUID userId;
     private BigDecimal amount;
     private String cause;
     private LocalDateTime failedAt;

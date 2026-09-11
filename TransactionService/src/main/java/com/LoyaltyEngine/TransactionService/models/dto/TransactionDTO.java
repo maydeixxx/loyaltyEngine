@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.TransactionService.models.dto;
 
-import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import lombok.Builder;
 import lombok.Value;
 

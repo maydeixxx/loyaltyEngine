@@ -37,7 +37,7 @@ public class TransactionController {
                 .toList();
         TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(
                 transactionService.createTransaction(
-                        transaction.userId(), transaction.amount(), domainItems, idempotencyKey, transaction.useCashbackBalance()
+                        transaction.userId(), transaction.amount(), transaction.currency(), domainItems, idempotencyKey, transaction.useCashbackBalance()
                 )
         );
         log.info("Transaction created successfully with id: {}", savedTransaction.getId());
@@ -45,7 +45,7 @@ public class TransactionController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<TransactionDTO>> getTransactionsByUserId(@PathVariable Long userId) {
+    public ResponseEntity<List<TransactionDTO>> getTransactionsByUserId(@PathVariable UUID userId) {
         List<TransactionDTO> transactions = transactionService.getTransactionByUserId(userId).stream().map(transactionMapper::transactionDomainToDTO).toList();
         return ResponseEntity.ok(transactions);
     }

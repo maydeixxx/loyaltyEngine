@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.TransactionService.servicesTests;
 
-import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreatedEvent;

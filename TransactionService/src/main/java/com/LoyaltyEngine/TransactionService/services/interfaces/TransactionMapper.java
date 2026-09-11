@@ -49,6 +49,7 @@ public interface TransactionMapper {
                 Currency.getInstance(entity.getCurrency()),
                 items,
                 entity.getCreatedAt(),
+                entity.getStatus(),
                 entity.getUseCashbackBalance()
         );
     }
@@ -91,7 +92,8 @@ public interface TransactionMapper {
     }
 
     default TransactionItemDomain transactionItemEntityToDomain(TransactionItem transactionItem) {
-        return TransactionItemDomain.createTransactionItem(
+        return TransactionItemDomain.restoreFromExisting(
+                transactionItem.getId(),
                 transactionItem.getCategory(),
                 transactionItem.getName(),
                 transactionItem.getPrice(),

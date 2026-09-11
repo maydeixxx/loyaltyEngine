@@ -7,6 +7,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.Objects;
+import java.util.UUID;
 
 @Getter
 public class TransactionItemDomain {
@@ -33,6 +34,20 @@ public class TransactionItemDomain {
         }
 
         ItemId itemId = ItemId.generateItemId();
+        return new TransactionItemDomain(itemId, category, name, price);
+    }
+
+    public static TransactionItemDomain restoreFromExisting(UUID id, String category, String name, BigDecimal amount, Currency currency) {
+        ItemId itemId = new ItemId(id);
+        Money price = Money.of(amount, currency);
+
+        if (category == null || category.isBlank()) {
+            throw new IllegalArgumentException("Category не может быть пустым");
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name не может быть пустым");
+        }
+
         return new TransactionItemDomain(itemId, category, name, price);
     }
 
