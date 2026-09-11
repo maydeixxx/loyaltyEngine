@@ -34,11 +34,11 @@ public class UserConsumer {
     @KafkaListener(
             topics = "get_user_status",
             groupId = "user_service",
-            containerFactory = "longConcurrentKafkaListenerContainerFactory"
+            containerFactory = "uuidConcurrentKafkaListenerContainerFactory"
     )
-    public void handleWalletServiceRequest(ConsumerRecord<UUID, Long> record) {
+    public void handleWalletServiceRequest(ConsumerRecord<UUID, UUID> record) {
         UUID requestId = record.key();
-        Long userId = record.value();
+        UUID userId = record.value();
         Optional<User> userById = userRepository.findUserById(userId);
         UserStatus userStatus = userById.isPresent() ? UserStatus.EXISTS : UserStatus.NOT_FOUND;
         UserResponseEventModel response = UserResponseEventModel.builder()

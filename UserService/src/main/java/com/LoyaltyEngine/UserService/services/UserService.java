@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.UserService.services;
 
 import com.LoyaltyEngine.UserService.exceptions.AuthenticationException;
+import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
 import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.models.User;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +34,11 @@ public class UserService {
 
     public UserDomain createUser(CreateUserDTO userDTO) {
         try {
-            UserDomain newUser = UserDomain.createUser(userDTO.getEmail(), userDTO.getFirstName(), userDTO.getLastName(), passwordEncoder.encode(userDTO.getPassword()));
+            UserDomain newUser = UserDomain.createUser(userDTO.email(), userDTO.firstName(), userDTO.lastName(), passwordEncoder.encode(userDTO.password()));
             return userMapper.entityToDomain(userRepository.save(userMapper.domainToEntity(newUser)));
         } catch (DataIntegrityViolationException e) {
-            log.error("Email {} already registered", userDTO.getEmail());
-            throw e;
+            log.error("Email {} already registered", userDTO.email());
+            throw new CreateUserException("Email [%s] already registered".formatted(userDTO.email()));
         } catch (Exception e) {
             log.error("Unexpected error creating user: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -57,7 +59,7 @@ public class UserService {
         }
     }
 
-    public UserDomain findUserById(Long id) {
+    public UserDomain findUserById(UUID id) {
         try {
             return userMapper.entityToDomain(
                     userRepository
@@ -84,7 +86,6 @@ public class UserService {
         }
     }
 
-    @Transactional
     public void updateUser(String email, UpdateUserDTO updateUserDTO) {
         try {
             UserDomain user = userMapper.entityToDomain(userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
@@ -98,6 +99,7 @@ public class UserService {
             }
 
             user.updateUpdatedAt(LocalDateTime.now());
+            userRepository.save(userMapper.domainToEntity(user));
         } catch (UserNotFoundException | UserUpdateException e) {
             log.error(e.getMessage());
             throw e;
@@ -122,13 +124,13 @@ public class UserService {
 
     public String login(AuthUserDto userDto) {
         try {
-            String email = userDto.getEmail();
-            String password = userDto.getPassword();
+            String email = userDto.email();
+            String password = userDto.password();
 
             User user = userRepository.findUserByEmail(email)
                     .orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
 
-            if (!passwordEncoder.matches(password, user.getPassword())) {
+            if (!passwordEncoder.matches(password, user.getHashedPassword())) {
                 throw new AuthenticationException("Password is incorrect");
             }
             return jwtService.generateJwtToken(user);

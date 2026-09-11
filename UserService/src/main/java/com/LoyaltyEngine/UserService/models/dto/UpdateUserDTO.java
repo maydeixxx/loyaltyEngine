@@ -15,6 +15,6 @@ public record UpdateUserDTO(
         @Size(min = 2, max = 50, message = "lastName must be between 2 and 50 characters")
         String lastName,
 
-        @Size(min = 5, max = 10, message = "password must be between 5 and 10 characters")
+        @Size(min = 8, max = 25, message = "password must be between 8 and 25 characters")
         String password
 ) {}

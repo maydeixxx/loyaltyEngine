@@ -4,9 +4,11 @@ import com.LoyaltyEngine.UserService.models.domain.enums.UserStatus;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
 @Builder
 public class UserResponseEventModel {
-    Long userId;
+    UUID userId;
     UserStatus userStatus;
 }

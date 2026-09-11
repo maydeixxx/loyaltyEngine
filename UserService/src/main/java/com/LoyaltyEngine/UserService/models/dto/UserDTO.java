@@ -1,11 +1,11 @@
 package com.LoyaltyEngine.UserService.models.dto;
 
-import lombok.Data;
 
-@Data
-public class UserDTO {
-    private Long id;
-    private String email;
-    private String firstName;
-    private String lastName;
-}
+import java.util.UUID;
+
+public record UserDTO(
+        UUID id,
+        String email,
+        String firstName,
+        String lastName
+) {}

@@ -1,11 +1,13 @@
 package com.LoyaltyEngine.UserService.services.security;
 
-import com.LoyaltyEngine.UserService.exceptions.JwtCheckingException;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,22 +19,25 @@ import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
 
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
-        String jwt = null;
         String email = null;
+        Claims claims = null;
+        String jwt;
 
         if (header != null && header.startsWith("Bearer ")) {
             jwt = header.replace("Bearer ", "");
             try {
-                email = jwtService.getEmailFromToken(jwt);
+                claims = jwtService.getClaimsFromToken(jwt);
+                email = claims.getSubject();
             } catch (Exception e) {
-                throw new JwtCheckingException(String.format("Error checking jwt: %s", e.getMessage()));
+                log.error("Error checking jwt: {}", e.getMessage());
             }
         }
 
@@ -40,7 +45,7 @@ public class JwtFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
                     email,
                     null,
-                    Collections.singleton(new SimpleGrantedAuthority(jwtService.getRoleFromToken(jwt)))
+                    Collections.singleton(new SimpleGrantedAuthority(claims.get("role").toString()))
             );
             SecurityContextHolder.getContext().setAuthentication(token);
         }

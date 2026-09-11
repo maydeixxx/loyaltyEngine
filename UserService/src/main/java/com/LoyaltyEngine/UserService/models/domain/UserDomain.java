@@ -8,6 +8,8 @@ import com.LoyaltyEngine.UserService.models.domain.valueObjects.UserId;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.UUID;
 
 @Getter
 public class UserDomain {
@@ -21,6 +23,18 @@ public class UserDomain {
     private LocalDateTime updatedAt;
 
     private UserDomain(UserId id, String email, String firstName, String lastName, HashedPassword passwordHash, Role role, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        if (email == null || email.isEmpty()) {
+            throw new UserValidationException("Email cant be null or empty");
+        }
+
+        if (lastName == null || lastName.isEmpty()) {
+            throw new UserValidationException("lastName cant be null or empty");
+        }
+
+        if (firstName == null || firstName.isEmpty()) {
+            throw new UserValidationException("firstName cant be null or empty");
+        }
+
         this.id = id;
         this.email = email;
         this.firstName = firstName;
@@ -32,23 +46,18 @@ public class UserDomain {
     }
 
     public static UserDomain createUser(String email, String firstName, String lastName, String password) {
-        if (email == null || email.isEmpty()) {
-            throw new UserValidationException("Email cant be null or empty");
-        }
-
-        if (firstName == null || firstName.isEmpty()) {
-            throw new UserValidationException("firstName cant be null or empty");
-        }
-
-        if (lastName == null || lastName.isEmpty()) {
-            throw new UserValidationException("lastName cant be null or empty");
-        }
-
         UserId userId = UserId.generateUserId();
         LocalDateTime now = LocalDateTime.now();
         HashedPassword hashedPassword = new HashedPassword(password);
 
         return new UserDomain(userId, email, firstName, lastName, hashedPassword, Role.USER, now, now);
+    }
+
+    public static UserDomain restoreFromExisting(UUID id, String email, String firstName, String lastName, String password, Role role, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        UserId userId = UserId.restoreFromExisting(id);
+        HashedPassword hashedPassword = new HashedPassword(password);
+
+        return new UserDomain(userId, email, firstName, lastName, hashedPassword, role, createdAt, updatedAt);
     }
 
     public void updateEmail(String newEmail) {
@@ -88,5 +97,16 @@ public class UserDomain {
 
     public void updateUpdatedAt(LocalDateTime newUpdatedAt) {
         this.updatedAt = newUpdatedAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof UserDomain that)) return false;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 }
