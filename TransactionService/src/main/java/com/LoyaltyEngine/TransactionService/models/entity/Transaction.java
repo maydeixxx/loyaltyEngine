@@ -18,11 +18,16 @@ import java.util.UUID;
 @Data
 public class Transaction {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    private Long userId;
+
+    private UUID userId;
     private UUID idempotencyKey;
+
+    @Column(nullable = false)
     private BigDecimal amount;
+    @Column(nullable = false)
+    private String currency;
+
     @OneToMany(
             fetch = FetchType.LAZY,
             mappedBy = "transaction",
@@ -30,20 +35,14 @@ public class Transaction {
             orphanRemoval = true
     )
     private List<TransactionItem> transactionItems = new ArrayList<>();
+
     private LocalDateTime createdAt;
     private Status status;
 
-    // Только для создания новых транзакций
-    public void setTransactionItems(List<TransactionItem> items) {
-        if (items != null) {
-            items.forEach(this::addTransactionItem);
-        }
-    }
+    private Boolean useCashbackBalance;
 
-    public void addTransactionItem(TransactionItem item) {
-        if (item != null) {
-            transactionItems.add(item);
-            item.setTransaction(this);
-        }
+    public void addItem(TransactionItem item) {
+        this.transactionItems.add(item);
+        item.setTransaction(this);
     }
 }

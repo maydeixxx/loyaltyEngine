@@ -18,6 +18,7 @@ public class TransactionCreatedEvent {
     private UUID transactionId;
     private Long userId;
     private BigDecimal amount;
+    private String currency;
     private List<TransactionItemEvent> items;
     private LocalDateTime createdAt;
     private Boolean useCashbackBalance;

@@ -9,7 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,7 +33,7 @@ public class TransactionController {
         );
 
         List<TransactionItemDomain> domainItems = transaction.items().stream()
-                .map(transactionMapper::createTransactionItemDtoToDomain)
+                .map(transactionMapper::transactionItemDtoToDomain)
                 .toList();
         TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(
                 transactionService.createTransaction(

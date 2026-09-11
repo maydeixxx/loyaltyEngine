@@ -52,7 +52,7 @@ public class UserService {
             log.error(e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Internal server error: {}", e.getMessage());
+            log.error("Error deleting user: {}", e.getMessage());
             throw new RuntimeException(e);
         }
     }

@@ -1,12 +1,15 @@
 package com.LoyaltyEngine.TransactionService.models.dto;
 
+import lombok.Builder;
 import lombok.Data;
+import lombok.Value;
 
 import java.math.BigDecimal;
 
-@Data
+@Value
+@Builder
 public class TransactionItemDTO {
-    private String category;
-    private String name;
-    private BigDecimal price;
+    String category;
+    String name;
+    BigDecimal price;
 }

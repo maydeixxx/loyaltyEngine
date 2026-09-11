@@ -53,7 +53,8 @@ public class TransactionService {
                 .map(
                         item -> TransactionItemEvent.builder()
                                 .name(item.getName())
-                                .price(item.getPrice())
+                                .price(item.getPrice().amount())
+                                .currency(item.getPrice().currency().toString())
                                 .category(item.getCategory())
                                 .build()
                 )
