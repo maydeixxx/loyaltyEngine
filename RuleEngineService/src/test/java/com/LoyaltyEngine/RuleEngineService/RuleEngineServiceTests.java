@@ -73,7 +73,7 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         //when
-        UUID id = ruleEngineService.getAllRules().getFirst().getId();
+        UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
         ruleEngineService.deleteCashbackRule(id);
         List<CashbackRuleDomain> allRules = ruleEngineService.getAllRules();
 
@@ -92,7 +92,7 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO("new", null, null, null);
-        UUID id = ruleEngineService.getAllRules().getFirst().getId();
+        UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
 
         //when
         ruleEngineService.updateCashbackRule(newRule, id);

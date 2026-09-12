@@ -36,6 +36,7 @@ public class SecurityConfig {
                     return corsConfiguration;
                 }))
                 .authorizeHttpRequests(request -> {
+                    request.requestMatchers("/api/v1/rules").hasRole("ADMIN");
                     request.requestMatchers("/api/v1/rules/**").hasRole("ADMIN");
                     request.anyRequest().permitAll();
                 })

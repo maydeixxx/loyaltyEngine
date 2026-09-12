@@ -1,18 +1,15 @@
 package com.LoyaltyEngine.RuleEngineService.models.eventModels;
 
-import lombok.Builder;
-import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Builder
-@Data
-public class CalculatedCashbackEventModel {
-    private UUID transactionId;
-    private Long userId;
-    private BigDecimal amountOfTransaction;
-    private BigDecimal totalItemPrice;
-    private BigDecimal amount;
-    private Boolean useCashback;
+public record CalculatedCashbackEventModel(
+        UUID transactionId,
+        UUID userId,
+        BigDecimal amountOfTransaction,
+        BigDecimal totalItemPrice,
+        BigDecimal amount,
+        Boolean useCashback
+) {
 }

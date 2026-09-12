@@ -26,31 +26,31 @@ public class RuleEngineConsumer {
             groupId = "rule_engine_service",
             containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
     )
-    private void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEvent> record) {
+    public void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEvent> record) {
         TransactionCreatedEvent model = record.value();
 
         UUID transactionId = record.key();
-        Long userId = model.getUserId();
-        BigDecimal amountOfTransaction = model.getAmount();
+        UUID userId = model.userId();
+        BigDecimal amountOfTransaction = model.amount();
         BigDecimal cashback = BigDecimal.ZERO;
         BigDecimal totalItemPrice = BigDecimal.ZERO;
 
-        for (TransactionItemEvent item : model.getItems()) {
-            BigDecimal itemPrice = item.getPrice();
-            BigDecimal percentageForCategory = ruleEngineService.getPercentageForCategory(item.getCategory());
+        for (TransactionItemEvent item : model.items()) {
+            BigDecimal itemPrice = item.price();
+            BigDecimal percentageForCategory = ruleEngineService.getPercentageForCategory(item.category());
 
             totalItemPrice = totalItemPrice.add(itemPrice);
-            cashback = cashback.add(itemPrice.multiply(percentageForCategory).divide(hundred, 2, RoundingMode.HALF_UP));
+            cashback = cashback.add(itemPrice.multiply(percentageForCategory).divide(hundred, 2, RoundingMode.HALF_EVEN));
         }
 
-        CalculatedCashbackEventModel calculatedCashbackModel = CalculatedCashbackEventModel.builder()
-                .transactionId(transactionId)
-                .userId(userId)
-                .amountOfTransaction(amountOfTransaction)
-                .totalItemPrice(totalItemPrice)
-                .amount(cashback)
-                .useCashback(model.getUseCashbackBalance())
-                .build();
+        CalculatedCashbackEventModel calculatedCashbackModel = new CalculatedCashbackEventModel(
+                transactionId,
+                userId,
+                amountOfTransaction,
+                totalItemPrice,
+                cashback,
+                model.useCashbackBalance()
+        );
 
         ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);
         log.info("Total cashback for transaction {} : {}", transactionId, cashback);
