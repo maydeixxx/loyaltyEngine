@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -24,6 +25,9 @@ import java.util.UUID;
 @SpringBootTest
 @Testcontainers
 @Transactional
+@TestPropertySource(properties = {
+        "eureka.client.enabled=false"
+})
 public class RuleEngineServiceTests {
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18.3");
@@ -73,7 +77,7 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         //when
-        UUID id = ruleEngineService.getAllRules().getFirst().getId();
+        UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
         ruleEngineService.deleteCashbackRule(id);
         List<CashbackRuleDomain> allRules = ruleEngineService.getAllRules();
 
@@ -92,7 +96,7 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO("new", null, null, null);
-        UUID id = ruleEngineService.getAllRules().getFirst().getId();
+        UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
 
         //when
         ruleEngineService.updateCashbackRule(newRule, id);
@@ -118,7 +122,7 @@ public class RuleEngineServiceTests {
         BigDecimal percentage1 = ruleEngineService.getPercentageForCategory("electronics");
 
         //then
-        Assertions.assertEquals(new BigDecimal("12.5"), percentage1);
+        Assertions.assertEquals(new BigDecimal("12.50"), percentage1);
     }
 
     @Test

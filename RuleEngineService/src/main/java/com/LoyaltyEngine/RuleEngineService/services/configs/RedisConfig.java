@@ -18,8 +18,7 @@ import java.time.Duration;
 public class RedisConfig {
 
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        ObjectMapper mapper = new ObjectMapper();
+    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory, ObjectMapper mapper) {
         RedisCacheConfiguration configuration = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(5))
                 .serializeKeysWith(

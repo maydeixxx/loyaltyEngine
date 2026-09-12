@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.TransactionService.servicesTests;
 
-import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.Money;
+import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreatedEvent;
@@ -9,14 +10,21 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.TopicPartition;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -27,6 +35,7 @@ import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,6 +70,21 @@ public class OutboxEventPublisherTests {
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
     }
 
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public ConcurrentKafkaListenerContainerFactory<UUID, TransactionCreatedEvent> transactionCreatedEventConcurrentKafkaListenerContainerFactory() {
+            ConcurrentKafkaListenerContainerFactory<UUID, TransactionCreatedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+            Map<String, Object> props = new HashMap<>();
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+            props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
+            props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+            props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
+            factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(props, new UUIDDeserializer(), new JacksonJsonDeserializer<>(TransactionCreatedEvent.class, false)));
+            return factory;
+        }
+    }
+
     @BeforeEach
     void setup() {
         receivedRecords.clear();
@@ -88,7 +112,8 @@ public class OutboxEventPublisherTests {
     @DisplayName("Успешная отправка кафка события")
     void successfulKafkaSend() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("129.43"), items, UUID.randomUUID());
+        UUID userId = UUID.randomUUID();
+        TransactionDomain transaction = transactionService.createTransaction(userId, new BigDecimal("102.2"), items, UUID.randomUUID(), false);
 
         //when
         Awaitility.await().atMost(7, TimeUnit.SECONDS)
@@ -99,9 +124,9 @@ public class OutboxEventPublisherTests {
         TransactionCreatedEvent createdTransaction = record.value();
 
         //then
-        Assertions.assertEquals(transaction.getId(), id);
-        Assertions.assertEquals(transaction.getUserId(), createdTransaction.getUserId());
-        Assertions.assertEquals(transaction.getAmount(), createdTransaction.getAmount());
+        Assertions.assertEquals(transaction.getId().value(), id);
+        Assertions.assertEquals(transaction.getUserId().value(), createdTransaction.getUserId());
+        Assertions.assertEquals(transaction.getAmount().amount(), new Money(createdTransaction.getAmount()).amount());
         Assertions.assertEquals(Status.NEW, transaction.getStatus());
     }
 }

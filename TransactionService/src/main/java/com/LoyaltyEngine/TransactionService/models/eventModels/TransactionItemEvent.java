@@ -15,4 +15,5 @@ public class TransactionItemEvent {
     private String category;
     private String name;
     private BigDecimal price;
+    private String currency;
 }

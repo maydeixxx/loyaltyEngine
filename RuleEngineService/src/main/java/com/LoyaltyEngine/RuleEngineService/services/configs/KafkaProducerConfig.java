@@ -51,6 +51,7 @@ public class KafkaProducerConfig {
         props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 15000);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        props.put(JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false);
 
         return new DefaultKafkaProducerFactory<>(props);
     }

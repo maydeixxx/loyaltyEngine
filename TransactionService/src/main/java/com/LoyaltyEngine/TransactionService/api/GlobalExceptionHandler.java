@@ -1,7 +1,7 @@
 package com.LoyaltyEngine.TransactionService.api;
 
 import com.LoyaltyEngine.TransactionService.exceptions.*;
-import com.LoyaltyEngine.TransactionService.models.apiResponses.ErrorResponse;
+import com.LoyaltyEngine.TransactionService.models.dto.ErrorResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -20,21 +20,21 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
     @ExceptionHandler(TransactionNotFoundException.class)
     public ResponseEntity<?> transactionNotFoundHandler(TransactionNotFoundException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildResponse("Transaction not found", new HashMap<>(), ex.getMessage(), 404, request);
-        return ResponseEntity.status(404).body(errorResponse);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Transaction not found", new HashMap<>(), ex.getMessage(), 404, request);
+        return ResponseEntity.status(404).body(errorResponseDTO);
     }
 
     @ExceptionHandler(TransactionCreatingException.class)
     public ResponseEntity<?> transactionCreatingHandler(TransactionCreatingException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildResponse("Error while creating transaction", new HashMap<>(), ex.getMessage(), 400, request);
-        return ResponseEntity.status(400).body(errorResponse);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Error while creating transaction", new HashMap<>(), ex.getMessage(), 400, request);
+        return ResponseEntity.status(400).body(errorResponseDTO);
     }
 
     @ExceptionHandler(TransactionRepositoryException.class)
     public ResponseEntity<?> transactionRepositoryHandler(TransactionRepositoryException ex, WebRequest request) {
         log.error("Error 500: ", ex);
-        ErrorResponse errorResponse = buildResponse("Error in repository", new HashMap<>(), ex.getMessage(), 500, request);
-        return ResponseEntity.status(500).body(errorResponse);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Error in repository", new HashMap<>(), ex.getMessage(), 500, request);
+        return ResponseEntity.status(500).body(errorResponseDTO);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -43,32 +43,32 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .stream()
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-        ErrorResponse errorResponse = buildResponse("Validation Failed", errors, "Error validating data", 400, request);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Validation Failed", errors, "Error validating data", 400, request);
 
-        return ResponseEntity.status(400).body(errorResponse);
+        return ResponseEntity.status(400).body(errorResponseDTO);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> globalExceptionHandler(Exception ex, WebRequest request) {
         log.error("Error 500: ", ex);
-        ErrorResponse errorResponse = buildResponse("Global Error", new HashMap<>(), "Error on server", 500, request);
-        return ResponseEntity.status(500).body(errorResponse);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Global Error", new HashMap<>(), "Error on server", 500, request);
+        return ResponseEntity.status(500).body(errorResponseDTO);
     }
 
     @ExceptionHandler(TransactionMappingException.class)
     public ResponseEntity<?> handleTransactionMappingException(TransactionMappingException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildResponse("Error while mapping transaction", new HashMap<>(), ex.getMessage(), 400, request);
-        return ResponseEntity.status(400).body(errorResponse);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Error while mapping transaction", new HashMap<>(), ex.getMessage(), 400, request);
+        return ResponseEntity.status(400).body(errorResponseDTO);
     }
 
-    private ErrorResponse buildResponse(String error, Map<String, String> errors, String message, int status, WebRequest request) {
-        return ErrorResponse.builder()
-                .error(error)
-                .errors(errors)
-                .message(message)
-                .status(status)
-                .path(request.getDescription(false).replace("uri=", ""))
-                .timestamp(LocalDateTime.now())
-                .build();
+    private ErrorResponseDTO buildResponse(String error, Map<String, String> errors, String message, int status, WebRequest request) {
+        return new ErrorResponseDTO(
+                error,
+                errors,
+                message,
+                status,
+                request.getDescription(false).replace("uri=", ""),
+                LocalDateTime.now()
+        );
     }
 }

@@ -89,5 +89,4 @@ public class KafkaProducerConfig {
     public KafkaTemplate<UUID, Object> dlqKafkaTemplate() {
         return new KafkaTemplate<>(dlqProducerFactory());
     }
-
 }

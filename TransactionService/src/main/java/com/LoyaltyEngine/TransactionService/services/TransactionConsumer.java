@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.TransactionService.services;
 
-import com.LoyaltyEngine.TransactionService.models.domain.Status;
+import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionHandledEvent;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class TransactionConsumer {
         PointsFailedEvent pointsFailed = record.value();
         String cause = pointsFailed.getCause();
         LocalDateTime failedAt = pointsFailed.getFailedAt();
-        Long userId = pointsFailed.getUserId();
+        UUID userId = pointsFailed.getUserId();
         BigDecimal amount = pointsFailed.getAmount();
 
         transactionService.updateStatus(Status.REJECTED, transactionId);
@@ -44,7 +44,7 @@ public class TransactionConsumer {
     private void handleTransactionHandledEvent(ConsumerRecord<UUID, TransactionHandledEvent> record) {
         TransactionHandledEvent model = record.value();
         UUID transactionId = model.getTransactionId();
-        Long userId = model.getUserId();
+        UUID userId = model.getUserId();
 
         transactionService.updateStatus(Status.PROCESSED, transactionId);
         log.info("Transaction {} for user {} successfully handled!", transactionId, userId);

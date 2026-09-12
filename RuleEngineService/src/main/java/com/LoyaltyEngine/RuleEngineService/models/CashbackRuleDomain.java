@@ -1,24 +1,23 @@
 package com.LoyaltyEngine.RuleEngineService.models;
 
 import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackRuleValidationException;
+import com.LoyaltyEngine.RuleEngineService.models.valueObjects.RuleId;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Getter
-@EqualsAndHashCode
-@RequiredArgsConstructor
 public class CashbackRuleDomain {
-    @Setter
-    private UUID id;
-    private final String category;
-    private final BigDecimal percentage;
+    private final RuleId id;
+    private String category;
+    private BigDecimal percentage;
     private final LocalDateTime validFrom;
     private final LocalDateTime validTo;
 
-    public static CashbackRuleDomain createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
+    private CashbackRuleDomain(RuleId id, String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
         LocalDateTime now = LocalDateTime.now();
 
         if (category == null || category.isBlank()) {
@@ -45,6 +44,40 @@ public class CashbackRuleDomain {
             throw new CashbackRuleValidationException("Valid to cant be before present time");
         }
 
-        return new CashbackRuleDomain(category, percentage, validFrom, validTo);
+        this.id = id;
+        this.category = category;
+        this.percentage = percentage;
+        this.validFrom = validFrom;
+        this.validTo = validTo;
+    }
+
+    public static CashbackRuleDomain createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
+        RuleId ruleId = RuleId.generateId();
+        return new CashbackRuleDomain(ruleId, category, percentage, validFrom, validTo);
+    }
+
+    public static CashbackRuleDomain restoreFromExisting(UUID ruleId, String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
+        return new CashbackRuleDomain(new RuleId(ruleId), category, percentage, validFrom, validTo);
+    }
+
+    public void updateCategory(String category) {
+        if (category.isBlank() || this.category.equals(category)) throw new IllegalArgumentException("Cant change category");
+        this.category = category;
+    }
+
+    public void updatePercentage(BigDecimal percentage) {
+        if (percentage == null || this.percentage.equals(percentage) || percentage.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("Cant change percentage");
+        this.percentage = percentage;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof CashbackRuleDomain that)) return false;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
     }
 }

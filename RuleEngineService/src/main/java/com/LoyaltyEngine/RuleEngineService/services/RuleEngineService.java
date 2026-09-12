@@ -27,17 +27,9 @@ public class RuleEngineService {
 
     @Cacheable(value = "cashback_rules", key = "#category")
     public BigDecimal getPercentageForCategory(String category) {
-        List<CashbackRule> cashbackRulesByCategory = ruleEngineRepository.getCashbackRuleByCategoryOrderByValidFromDesc(category);
         LocalDateTime now = LocalDateTime.now();
-
-        for (CashbackRule cashbackRule : cashbackRulesByCategory) {
-            if ((cashbackRule.getValidFrom().isBefore(now) || cashbackRule.getValidFrom().isEqual(now))
-                    && (cashbackRule.getValidTo().isAfter(now) || cashbackRule.getValidTo().isEqual(now))) {
-                return cashbackRule.getPercentage();
-            }
-        }
-
-        return basePercentage;
+        Optional<BigDecimal> cashbackRule = ruleEngineRepository.findActivePercentageByCategory(category.toLowerCase().trim(), now);
+        return cashbackRule.orElse(basePercentage);
     }
 
     @CacheEvict(value = "cashback_rules", allEntries = true)
@@ -53,25 +45,17 @@ public class RuleEngineService {
     @Transactional
     @CacheEvict(value = "cashback_rules", allEntries = true)
     public void updateCashbackRule(UpdateCashbackModelDTO newValue, UUID id) {
-        CashbackRule cashbackRuleById = ruleEngineRepository.findById(id).orElseThrow(() -> new CashbackRuleNotFoundException("Rule not found: " + id));
+        CashbackRuleDomain cashbackRuleById = ruleEngineMapper.entityToDomain(ruleEngineRepository.findById(id).orElseThrow(() -> new CashbackRuleNotFoundException("Rule not found: " + id)));
 
         if (newValue.category() != null) {
-            cashbackRuleById.setCategory(newValue.category());
+            cashbackRuleById.updateCategory(newValue.category());
         }
 
         if (newValue.percentage() != null) {
-            cashbackRuleById.setPercentage(newValue.percentage());
+            cashbackRuleById.updatePercentage(newValue.percentage());
         }
 
-        if (newValue.validFrom() != null) {
-            cashbackRuleById.setValidFrom(newValue.validFrom());
-        }
-
-        if (newValue.validTo() != null) {
-            cashbackRuleById.setValidTo(newValue.validTo());
-        }
-
-        ruleEngineRepository.save(cashbackRuleById);
+        ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRuleById));
     }
 
     @Transactional

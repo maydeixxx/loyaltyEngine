@@ -1,6 +1,8 @@
 package com.LoyaltyEngine.WalletService.services;
 
+import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
+import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@SuppressWarnings("ALL")
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,25 +31,59 @@ public class WalletConsumer {
     private void handlePointsCalculatedEvent(ConsumerRecord<UUID, CalculatedCashbackEventModel> record, Acknowledgment ack) {
         UUID transactionId = record.key();
         CalculatedCashbackEventModel model = record.value();
+        UUID userId = model.userId();
 
         try {
-            walletService.creditPoints(model.getUserId(), transactionId, model.getAmount());
+            walletService.creditPoints(userId, transactionId, model.amount(), model.useCashback(), model.amountOfTransaction(), model.totalItemPrice());
             ack.acknowledge();
-            walletProducer.sendHandledTransaction(transactionId, model.getUserId());
+            walletProducer.sendHandledTransaction(transactionId, userId);
         } catch (WalletBlockedException e) {
-            PointsFailedEvent pointsFailed = PointsFailedEvent.builder()
-                    .transactionId(transactionId)
-                    .userId(model.getUserId())
-                    .cause("Wallet is blocked")
-                    .amount(model.getAmount())
-                    .failedAt(LocalDateTime.now())
-                    .build();
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    model.amount(),
+                    "Wallet is blocked",
+                    LocalDateTime.now()
+            );
 
-            walletProducer.sendMessageToPointsFailed(transactionId, pointsFailed);
+            walletProducer.sendMessageToPointsFailed(transactionId, pointsFailedEvent);
+            ack.acknowledge();
+        } catch (InsufficientFundsException e) {
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    model.amount(),
+                    "Insufficient funds",
+                    LocalDateTime.now()
+            );
+
+            walletProducer.sendMessageToPointsFailed(transactionId, pointsFailedEvent);
             ack.acknowledge();
         } catch (Exception e) {
             log.error("Error processing cashback for transaction {} : {}", transactionId, e.getMessage());
-            throw e;
+            throw new RuntimeException(e);
+        }
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.user-created}",
+            groupId = "wallet_service",
+            containerFactory = "userCreatedKafkaListenerContainerFactory"
+    )
+    public void handleUserCreatedEvent(ConsumerRecord<UUID, UUID> record) {
+        UUID userId = record.value();
+
+        if (userId == null) {
+            throw new NullPointerException("User id is null");
+        }
+
+        try {
+            walletService.createWallet(userId);
+        } catch (WalletExistsException e) {
+            log.warn("Wallet for user [{}] already created", userId);
+        } catch (Exception e) {
+            log.error("Error handling user created event: {}", e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 }
