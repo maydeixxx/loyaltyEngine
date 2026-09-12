@@ -16,8 +16,5 @@ public record CreateTransactionItem (
 
     @NotNull(message = "Price обязательна")
     @DecimalMin(message = "Price не может быть < 0.01", value = "0.01")
-    BigDecimal price,
-
-    @NotNull(message = "Currency is required")
-    Currency currency
+    BigDecimal price
 ) {}

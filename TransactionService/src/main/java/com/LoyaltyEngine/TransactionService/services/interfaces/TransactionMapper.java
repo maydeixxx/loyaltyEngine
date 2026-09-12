@@ -15,12 +15,11 @@ import java.util.List;
 
 
 @Component
-public interface TransactionMapper {
+public class TransactionMapper {
 
-    default Transaction transactionDomainToEntity(TransactionDomain domain) {
+    public Transaction transactionDomainToEntity(TransactionDomain domain) {
         Transaction transaction = new Transaction();
         transaction.setAmount(domain.getAmount().amount());
-        transaction.setCurrency(domain.getAmount().currency().toString());
         transaction.setCreatedAt(domain.getCreatedAt());
         transaction.setId(domain.getId().value());
         transaction.setIdempotencyKey(domain.getIdempotencyKey().value());
@@ -35,7 +34,7 @@ public interface TransactionMapper {
         return transaction;
     }
 
-    default TransactionDomain transactionEntityToDomain(Transaction entity) {
+    public TransactionDomain transactionEntityToDomain(Transaction entity) {
         List<TransactionItemDomain> items = new ArrayList<>();
         for (TransactionItem item : entity.getTransactionItems()) {
             items.add(transactionItemEntityToDomain(item));
@@ -46,7 +45,6 @@ public interface TransactionMapper {
                 entity.getUserId(),
                 entity.getIdempotencyKey(),
                 entity.getAmount(),
-                Currency.getInstance(entity.getCurrency()),
                 items,
                 entity.getCreatedAt(),
                 entity.getStatus(),
@@ -54,7 +52,7 @@ public interface TransactionMapper {
         );
     }
 
-    default TransactionDTO transactionDomainToDTO(TransactionDomain transactionDomain) {
+    public TransactionDTO transactionDomainToDTO(TransactionDomain transactionDomain) {
         List<TransactionItemDTO> items = new ArrayList<>();
         for (TransactionItemDomain item : transactionDomain.getItems()) {
             items.add(transactionItemDomainToDTO(item));
@@ -71,7 +69,7 @@ public interface TransactionMapper {
         );
     }
 
-    default TransactionItemDTO transactionItemDomainToDTO(TransactionItemDomain item) {
+    public TransactionItemDTO transactionItemDomainToDTO(TransactionItemDomain item) {
         return new TransactionItemDTO(
                 item.getCategory(),
                 item.getName(),
@@ -79,10 +77,9 @@ public interface TransactionMapper {
         );
     }
 
-    default TransactionItem transactionItemDomainToEntity(TransactionItemDomain item, Transaction parent) {
+    public TransactionItem transactionItemDomainToEntity(TransactionItemDomain item, Transaction parent) {
         TransactionItem transactionItem = new TransactionItem();
         transactionItem.setPrice(item.getPrice().amount());
-        transactionItem.setCurrency(item.getPrice().currency().toString());
         transactionItem.setName(item.getName());
         transactionItem.setCategory(item.getCategory());
         transactionItem.setId(item.getId().value());
@@ -91,22 +88,20 @@ public interface TransactionMapper {
         return transactionItem;
     }
 
-    default TransactionItemDomain transactionItemEntityToDomain(TransactionItem transactionItem) {
+    public TransactionItemDomain transactionItemEntityToDomain(TransactionItem transactionItem) {
         return TransactionItemDomain.restoreFromExisting(
                 transactionItem.getId(),
                 transactionItem.getCategory(),
                 transactionItem.getName(),
-                transactionItem.getPrice(),
-                Currency.getInstance(transactionItem.getCurrency())
+                transactionItem.getPrice()
         );
     }
 
-    default TransactionItemDomain transactionItemDtoToDomain(CreateTransactionItem item) {
+    public TransactionItemDomain transactionItemDtoToDomain(CreateTransactionItem item) {
         return TransactionItemDomain.createTransactionItem(
                 item.category(),
                 item.name(),
-                item.price(),
-                item.currency()
+                item.price()
         );
     }
 }

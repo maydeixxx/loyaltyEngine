@@ -1,5 +1,6 @@
 package com.LoyaltyEngine.TransactionService.servicesTests;
 
+import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
@@ -34,7 +35,6 @@ import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,10 +48,9 @@ public class OutboxEventPublisherTests {
     @Autowired
     TransactionService transactionService;
 
-    private static final Currency currency = Currency.getInstance("USD");
     private static final List<ConsumerRecord<UUID, TransactionCreatedEvent>> receivedRecords = new CopyOnWriteArrayList<>();
     private final List<TransactionItemDomain> items = List.of(
-            TransactionItemDomain.createTransactionItem("ELECTRONICS", "LAPTOP", new BigDecimal("102.2"), currency)
+            TransactionItemDomain.createTransactionItem("ELECTRONICS", "LAPTOP", new BigDecimal("102.2"))
     );
 
     @Container
@@ -114,7 +113,7 @@ public class OutboxEventPublisherTests {
     void successfulKafkaSend() {
         //given
         UUID userId = UUID.randomUUID();
-        TransactionDomain transaction = transactionService.createTransaction(userId, new BigDecimal("102.2"), currency, items, UUID.randomUUID(), false);
+        TransactionDomain transaction = transactionService.createTransaction(userId, new BigDecimal("102.2"), items, UUID.randomUUID(), false);
 
         //when
         Awaitility.await().atMost(7, TimeUnit.SECONDS)
@@ -127,7 +126,7 @@ public class OutboxEventPublisherTests {
         //then
         Assertions.assertEquals(transaction.getId().value(), id);
         Assertions.assertEquals(transaction.getUserId().value(), createdTransaction.getUserId());
-        Assertions.assertEquals(transaction.getAmount().amount(), createdTransaction.getAmount());
+        Assertions.assertEquals(transaction.getAmount().amount(), new Money(createdTransaction.getAmount()).amount());
         Assertions.assertEquals(Status.NEW, transaction.getStatus());
     }
 }

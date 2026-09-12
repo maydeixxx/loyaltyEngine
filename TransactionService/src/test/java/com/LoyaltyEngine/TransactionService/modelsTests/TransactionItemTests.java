@@ -21,13 +21,12 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("102.2");
 
         //when
-        TransactionItemDomain transactionItem = TransactionItemDomain.createTransactionItem(category, name, price, currency);
+        TransactionItemDomain transactionItem = TransactionItemDomain.createTransactionItem(category, name, price);
 
         //then
         Assertions.assertEquals(category, transactionItem.getCategory());
         Assertions.assertEquals(name, transactionItem.getName());
         Assertions.assertEquals(new BigDecimal("102.20"), transactionItem.getPrice().amount());
-        Assertions.assertEquals(currency, transactionItem.getPrice().currency());
     }
 
     @Test
@@ -39,7 +38,7 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("1.02");
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price, currency));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
 
         Assertions.assertEquals("Category не может быть пустым", ex.getMessage());
     }
@@ -53,7 +52,7 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("1.02");
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price, currency));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
 
         Assertions.assertEquals("Name не может быть пустым", ex.getMessage());
     }
@@ -67,7 +66,7 @@ public class TransactionItemTests {
         BigDecimal price = new BigDecimal("-1.02");
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price, currency));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
 
         Assertions.assertEquals("Amount cant be negative", ex.getMessage());
     }

@@ -14,16 +14,13 @@ import java.util.UUID;
 public class WalletProducer {
     private final KafkaTemplate<UUID, PointsFailedEvent> kafkaTemplatePointsFailed;
     private final KafkaTemplate<UUID, TransactionHandledEvent> transactionHandledEventKafkaTemplate;
-    private final KafkaTemplate<UUID, Long> userRequestKafkaTemplate;
 
     public WalletProducer(
             @Qualifier("pointsFailedEventKafkaTemplate") KafkaTemplate<UUID, PointsFailedEvent> kafkaTemplatePointsFailed,
-            @Qualifier("transactionHandledEventKafkaTemplate") KafkaTemplate<UUID, TransactionHandledEvent> transactionHandledEventKafkaTemplate,
-            @Qualifier("userRequestEventModelKafkaTemplate") KafkaTemplate<UUID, Long> userRequestKafkaTemplate
+            @Qualifier("transactionHandledEventKafkaTemplate") KafkaTemplate<UUID, TransactionHandledEvent> transactionHandledEventKafkaTemplate
     ) {
         this.kafkaTemplatePointsFailed = kafkaTemplatePointsFailed;
         this.transactionHandledEventKafkaTemplate = transactionHandledEventKafkaTemplate;
-        this.userRequestKafkaTemplate = userRequestKafkaTemplate;
     }
 
     public void sendMessageToPointsFailed(UUID transactionId, PointsFailedEvent event) {
@@ -43,11 +40,11 @@ public class WalletProducer {
                 );
     }
 
-    public void sendHandledTransaction(UUID transactionId, Long userId) {
-        TransactionHandledEvent event = TransactionHandledEvent.builder()
-                .transactionId(transactionId)
-                .userId(userId)
-                .build();
+    public void sendHandledTransaction(UUID transactionId, UUID userId) {
+        TransactionHandledEvent event = new TransactionHandledEvent(
+                transactionId,
+                userId
+        );
 
         transactionHandledEventKafkaTemplate.send("transaction_handled", transactionId, event).whenComplete(
                 (_, ex) -> {
@@ -55,18 +52,6 @@ public class WalletProducer {
                         log.error("Error sending message to transaction_handled : {}", ex.getMessage());
                     } else {
                         log.info("Message successfully sent to transaction_handled");
-                    }
-                }
-        );
-    }
-
-    public void sendUserRequest(UUID requestKey, Long userId) {
-        userRequestKafkaTemplate.send("get_user_status", requestKey, userId).whenComplete(
-                (_, ex) -> {
-                    if (ex != null) {
-                        log.error("Error sending userRequest: {}", ex.getMessage());
-                    } else {
-                        log.info("Message successfully sent to get_user_status");
                     }
                 }
         );

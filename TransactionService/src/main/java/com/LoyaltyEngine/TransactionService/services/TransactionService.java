@@ -43,13 +43,13 @@ public class TransactionService {
     private String transactionCreatedTopic;
 
     @Transactional
-    public TransactionDomain createTransaction(UUID userId, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
+    public TransactionDomain createTransaction(UUID userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
         if (transactionByIdempotencyKey.isPresent()) {
             return transactionByIdempotencyKey.get();
         }
 
-        TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, currency, items, useCashback);
+        TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, items, useCashback);
 
         List<TransactionItemEvent> eventItems = items
                 .stream()
@@ -57,7 +57,6 @@ public class TransactionService {
                         item -> TransactionItemEvent.builder()
                                 .name(item.getName())
                                 .price(item.getPrice().amount())
-                                .currency(item.getPrice().currency().toString())
                                 .category(item.getCategory())
                                 .build()
                 )
@@ -66,7 +65,6 @@ public class TransactionService {
         TransactionCreatedEvent transactionCreated = TransactionCreatedEvent.builder()
                 .userId(userId)
                 .amount(amount)
-                .currency(currency.toString())
                 .createdAt(newTransaction.getCreatedAt())
                 .items(eventItems)
                 .useCashbackBalance(useCashback)

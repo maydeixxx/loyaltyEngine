@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,9 +16,6 @@ public record CreateTransaction(
         @NotNull(message = "Amount of the trans. cant be null")
         @DecimalMin(value = "0.01", message = "Amount of the trans. must be > 0.01")
         BigDecimal amount,
-
-        @NotNull(message = "Currency is required")
-        Currency currency,
 
         @NotNull(message = "Items cant be null")
         @Size(min = 1, message = "Items size must be >= 1")

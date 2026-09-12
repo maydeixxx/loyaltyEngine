@@ -9,7 +9,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Currency;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -26,10 +25,6 @@ public class TransactionDomain {
     private final Boolean useCashbackBalance;
 
     private TransactionDomain(TransactionId id, UserId userId, IdempotencyKey idempotencyKey, Money amount, List<TransactionItemDomain> items, LocalDateTime createdAt, Status status, Boolean useCashbackBalance) {
-        if (items.isEmpty()) {
-            throw new IllegalArgumentException("Items size must be >= 1");
-        }
-
         this.id = id;
         this.userId = userId;
         this.idempotencyKey = idempotencyKey;
@@ -40,11 +35,15 @@ public class TransactionDomain {
         this.useCashbackBalance = useCashbackBalance;
     }
 
-    public static TransactionDomain create(UUID rawUserId, UUID rawIdempotencyKey, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, Boolean useCashbackBalance) {
-        Money transactionAmount = Money.of(amount, currency);
-        Money totalSum = new Money(BigDecimal.ZERO, currency);
+    public static TransactionDomain create(UUID rawUserId, UUID rawIdempotencyKey, BigDecimal amount, List<TransactionItemDomain> items, Boolean useCashbackBalance) {
+        Money transactionAmount = Money.of(amount);
+        Money totalSum = new Money(BigDecimal.ZERO);
         IdempotencyKey idempotencyKey = new IdempotencyKey(rawIdempotencyKey);
         UserId userId = new UserId(rawUserId);
+
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("Items size must be >= 1");
+        }
 
         for (TransactionItemDomain item : items) {
             totalSum = totalSum.add(item.getPrice());
@@ -62,11 +61,15 @@ public class TransactionDomain {
         return new TransactionDomain(transactionId, userId, idempotencyKey, transactionAmount, items, LocalDateTime.now(), Status.NEW, useCashbackBalance);
     }
 
-    public static TransactionDomain restoreFromExisting(UUID transactionId, UUID userId, UUID idempotencyKey, BigDecimal amount, Currency currency, List<TransactionItemDomain> items, LocalDateTime createdAt, Status status, Boolean userCashbackBalance) {
+    public static TransactionDomain restoreFromExisting(UUID transactionId, UUID userId, UUID idempotencyKey, BigDecimal amount, List<TransactionItemDomain> items, LocalDateTime createdAt, Status status, Boolean userCashbackBalance) {
         TransactionId transactionId1 = TransactionId.restoreFromExisting(transactionId);
         UserId userId1 = UserId.restoreFromExisting(userId);
         IdempotencyKey idempotencyKey1 = IdempotencyKey.restoreFromExisting(idempotencyKey);
-        Money money = Money.of(amount, currency);
+        Money money = Money.of(amount);
+
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("Items size must be >= 1");
+        }
 
         if (status == null) {
             throw new IllegalArgumentException("Status cant be null");

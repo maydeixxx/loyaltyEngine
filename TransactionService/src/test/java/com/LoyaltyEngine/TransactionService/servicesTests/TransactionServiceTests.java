@@ -42,7 +42,7 @@ public class TransactionServiceTests {
     private static final Currency currency = Currency.getInstance("USD");
 
     private final List<TransactionItemDomain> items = List.of(
-            TransactionItemDomain.createTransactionItem("ELECTRONICS", "LAPTOP", new BigDecimal("102.2"), currency)
+            TransactionItemDomain.createTransactionItem("ELECTRONICS", "LAPTOP", new BigDecimal("102.2"))
     );
 
     @Test
@@ -54,7 +54,7 @@ public class TransactionServiceTests {
         UUID idempotencyKey = UUID.randomUUID();
 
         //when
-        TransactionDomain transaction = transactionService.createTransaction(userId, amount, currency, items, idempotencyKey, false);
+        TransactionDomain transaction = transactionService.createTransaction(userId, amount, items, idempotencyKey, false);
 
         //then
         Assertions.assertEquals(userId, transaction.getUserId().value());
@@ -69,10 +69,10 @@ public class TransactionServiceTests {
         UUID userId1 = UuidCreator.getTimeOrderedEpoch();
         UUID userId2 = UuidCreator.getTimeOrderedEpoch();
         UUID idempotencyKey = UUID.randomUUID();
-        transactionService.createTransaction(userId1, new BigDecimal("102.2"), currency, items, idempotencyKey, false);
+        transactionService.createTransaction(userId1, new BigDecimal("102.2"), items, idempotencyKey, false);
 
         //when
-        TransactionDomain secondTransaction = transactionService.createTransaction(userId2, new BigDecimal("103.2"), currency, items, idempotencyKey, false);
+        TransactionDomain secondTransaction = transactionService.createTransaction(userId2, new BigDecimal("103.2"), items, idempotencyKey, false);
 
         //then
         Assertions.assertEquals(userId1, secondTransaction.getUserId().value());
@@ -84,7 +84,7 @@ public class TransactionServiceTests {
     void findTransactionByIdSuccess() {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
-        TransactionDomain transaction = transactionService.createTransaction(userId, new BigDecimal("105.1"), currency, items, UUID.randomUUID(), false);
+        TransactionDomain transaction = transactionService.createTransaction(userId, new BigDecimal("102.2"), items, UUID.randomUUID(), false);
         UUID id = transaction.getId().value();
 
         //when
@@ -112,7 +112,7 @@ public class TransactionServiceTests {
     void findTransactionByUserId() {
         //given
         UUID userid = UuidCreator.getTimeOrderedEpoch();
-        TransactionDomain transaction = transactionService.createTransaction(userid, new BigDecimal("105.1"), currency, items, UUID.randomUUID(), false);
+        TransactionDomain transaction = transactionService.createTransaction(userid, new BigDecimal("102.2"), items, UUID.randomUUID(), false);
 
         //when
         TransactionDomain transactionByUserId = transactionService.getTransactionByUserId(userid).getFirst();

@@ -3,11 +3,11 @@ package com.LoyaltyEngine.WalletService.services;
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
-import com.LoyaltyEngine.WalletService.models.domain.TransactionType;
+import com.LoyaltyEngine.WalletService.models.domain.enums.TransactionType;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
-import com.LoyaltyEngine.WalletService.models.domain.WalletStatus;
+import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
-import com.LoyaltyEngine.WalletService.models.entity.Wallet;
+import com.LoyaltyEngine.WalletService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
@@ -31,102 +31,137 @@ public class WalletService {
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
 
-    private Wallet createWallet(Long userId) {
-        return walletRepository.save(walletMapper.domainToEntity(WalletDomain.createWallet(userId)));
+    public void createWallet(UUID userId) {
+        try {
+            walletRepository.save(walletMapper.domainToEntity(WalletDomain.createWallet(userId)));
+        } catch (Exception e) {
+            log.error("Error creating wallet for user {}: {}", userId, e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     @Transactional
-    public void creditPoints(Long userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) {
-        Wallet wallet = walletRepository
-                .findWalletByUserId(userId)
-                .orElseGet(() -> createWallet(userId));
+    public void creditPoints(UUID userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) {
+        try {
+            WalletDomain wallet = findWalletByUserId(userId);
 
-        if (wallet.getStatus() == WalletStatus.BLOCKED) {
-            throw new WalletBlockedException(String.format("Wallet %s is blocked.", wallet.getId()));
-        }
+            if (wallet.getStatus() == WalletStatus.BLOCKED) {
+                throw new WalletBlockedException(String.format("Wallet %s is blocked.", wallet.getId()));
+            }
 
-        BigDecimal balance = wallet.getBalance();
-        if (useCashback && balance.compareTo(new BigDecimal("0.00")) > 0) {
-            BigDecimal cashbackToUse = totalItemPrice.subtract(amountOfTransaction);
+            Money balance = wallet.getBalance();
+            if (useCashback && balance.isGreaterThan(Money.zeroOf())) {
+                Money cashbackToUse = new Money(totalItemPrice.subtract(amountOfTransaction));
 
-            if (balance.compareTo(cashbackToUse) < 0) {
+                if (balance.isLessThan(cashbackToUse)) {
+                    throw new InsufficientFundsException("Insufficient funds");
+                }
+
+                LocalDateTime redeemTimeStamp = LocalDateTime.now();
+                wallet.debit(cashbackToUse.amount());
+
+                WalletTransactionDomain redeemCashback = WalletTransactionDomain.createWalletTransaction(
+                        wallet.getId().value(),
+                        transactionId,
+                        cashbackToUse.amount(),
+                        TransactionType.DEBIT,
+                        redeemTimeStamp,
+                        "Redeem cashback"
+                );
+                walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
+                walletRepository.save(walletMapper.domainToEntity(wallet));
+            } else if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
                 throw new InsufficientFundsException("Insufficient funds");
             }
 
-            LocalDateTime redeemTimeStamp = LocalDateTime.now();
-            wallet.setBalance(wallet.getBalance().subtract(cashbackToUse));
-            wallet.setUpdatedAt(redeemTimeStamp);
+            if (!useCashback) {
+                LocalDateTime timestamp = LocalDateTime.now();
+                wallet.credit(amount);
 
-            WalletTransactionDomain redeemCashback = WalletTransactionDomain.createWalletTransaction(
-                    wallet.getId(),
-                    transactionId,
-                    cashbackToUse,
-                    TransactionType.DEBIT,
-                    redeemTimeStamp,
-                    "Redeem cashback"
-            );
-            walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
-        } else if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
-            throw new InsufficientFundsException("Insufficient funds");
-        }
+                WalletTransactionDomain walletTransaction = WalletTransactionDomain.createWalletTransaction(
+                        wallet.getId().value(),
+                        transactionId,
+                        amount,
+                        TransactionType.CREDIT,
+                        timestamp,
+                        "Cashback from transaction " + transactionId
+                );
 
-        if (!useCashback) {
-            LocalDateTime timestamp = LocalDateTime.now();
-            wallet.setBalance(wallet.getBalance().add(amount));
-            wallet.setUpdatedAt(timestamp);
-
-            WalletTransactionDomain walletTransaction = WalletTransactionDomain.createWalletTransaction(
-                    wallet.getId(),
-                    transactionId,
-                    amount,
-                    TransactionType.CREDIT,
-                    timestamp,
-                    "Cashback from transaction " + transactionId
-            );
-
-            walletTransactionRepository.save(walletTransactionMapper.domainToEntity(walletTransaction));
-            log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amount);
+                walletTransactionRepository.save(walletTransactionMapper.domainToEntity(walletTransaction));
+                walletRepository.save(walletMapper.domainToEntity(wallet));
+                log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amount);
+            }
+        } catch (InsufficientFundsException | WalletBlockedException | WalletNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error crediting points to user {}: {}", userId, e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
     @Transactional
-    public void blockWallet(Long userId) {
-        Wallet wallet = walletRepository
-                .findWalletByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId)));
+    public void blockWallet(UUID userId) {
+        try {
+            WalletDomain wallet = findWalletByUserId(userId);
+            wallet.blockWallet();
 
-        wallet.setStatus(WalletStatus.BLOCKED);
-        wallet.setUpdatedAt(LocalDateTime.now());
-        log.info("Wallet {} blocked", wallet.getId());
+            walletRepository.save(walletMapper.domainToEntity(wallet));
+            log.info("Wallet {} blocked", wallet.getId().value());
+        } catch (Exception e) {
+            log.error("Error blocking wallet: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+
     }
 
     @Transactional
-    public void unblockWallet(Long userId) {
-        Wallet wallet = walletRepository
-                .findWalletByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId)));
+    public void unblockWallet(UUID userId) {
+        try {
+            WalletDomain wallet = findWalletByUserId(userId);
+            wallet.activateWallet();
 
-        wallet.setStatus(WalletStatus.ACTIVE);
-        wallet.setUpdatedAt(LocalDateTime.now());
-        log.info("Wallet {} unblocked", wallet.getId());
+            walletRepository.save(walletMapper.domainToEntity(wallet));
+            log.info("Wallet {} unblocked", wallet.getId().value());
+        } catch (Exception e) {
+            log.error("Error activating wallet: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
-    public BigDecimal getBalance(Long userId) {
-        return walletRepository
-                .findWalletByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId)))
-                .getBalance();
+    public BigDecimal getBalance(UUID userId) {
+        try {
+            return findWalletByUserId(userId).getBalance().amount();
+        } catch (Exception e) {
+            log.error("Error getting balance for user {}: {}", userId, e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
-    public List<WalletTransactionDomain> getTransactionsHistory(Long userId) {
-        UUID walletId = walletRepository
-                .findWalletByUserId(userId)
-                .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId)))
-                .getId();
+    public List<WalletTransactionDomain> getTransactionsHistory(UUID userId) {
+        try {
+            UUID walletId = findWalletByUserId(userId).getId().value();
 
-        return walletTransactionRepository.getWalletTransactionsByWalletId(walletId)
-                .stream()
-                .map(walletTransactionMapper::entityToDomain)
-                .toList();
+            return walletTransactionRepository.getWalletTransactionsByWalletId(walletId)
+                    .stream()
+                    .map(walletTransactionMapper::entityToDomain)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error getting transactions for user {}: {}", userId, e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    private WalletDomain findWalletByUserId(UUID userId) {
+        try {
+            return walletMapper.entityToDomain(walletRepository
+                    .findWalletByUserId(userId)
+                    .orElseThrow(() -> new WalletNotFoundException(String.format("Wallet by user id %s not found", userId))));
+        } catch (WalletNotFoundException e) {
+            log.error("Wallet not found");
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexcepted error: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 }

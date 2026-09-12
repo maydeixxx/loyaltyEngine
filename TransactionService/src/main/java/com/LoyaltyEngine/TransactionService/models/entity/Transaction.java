@@ -32,8 +32,6 @@ public class Transaction {
 
     @Column(nullable = false)
     private BigDecimal amount;
-    @Column(nullable = false)
-    private String currency;
 
     @OneToMany(
             fetch = FetchType.LAZY,

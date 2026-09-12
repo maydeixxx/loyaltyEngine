@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -28,8 +27,6 @@ public class TransactionItem {
 
     @Column(nullable = false)
     private BigDecimal price;
-    @Column(nullable = false)
-    private String currency;
 
     @Override
     public boolean equals(Object o) {

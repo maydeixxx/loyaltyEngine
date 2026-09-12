@@ -23,8 +23,8 @@ public class TransactionItemDomain {
         this.price = price;
     }
 
-    public static TransactionItemDomain createTransactionItem(String category, String name, BigDecimal amount, Currency currency) {
-        Money price = new Money(amount, currency);
+    public static TransactionItemDomain createTransactionItem(String category, String name, BigDecimal amount) {
+        Money price = new Money(amount);
 
         if (category == null || category.isBlank()) {
             throw new IllegalArgumentException("Category не может быть пустым");
@@ -37,9 +37,9 @@ public class TransactionItemDomain {
         return new TransactionItemDomain(itemId, category, name, price);
     }
 
-    public static TransactionItemDomain restoreFromExisting(UUID id, String category, String name, BigDecimal amount, Currency currency) {
+    public static TransactionItemDomain restoreFromExisting(UUID id, String category, String name, BigDecimal amount) {
         ItemId itemId = new ItemId(id);
-        Money price = Money.of(amount, currency);
+        Money price = Money.of(amount);
 
         if (category == null || category.isBlank()) {
             throw new IllegalArgumentException("Category не может быть пустым");

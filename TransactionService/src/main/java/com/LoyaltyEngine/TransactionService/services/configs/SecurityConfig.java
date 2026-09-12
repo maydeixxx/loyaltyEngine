@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(_ -> {
                     var corsConfiguration = new CorsConfiguration();
                     corsConfiguration.setAllowedMethods(List.of("GET", "POST"));
-                    corsConfiguration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-IDEMPOTENCY-KEY"));
+                    corsConfiguration.setAllowedHeaders(List.of("*"));
                     corsConfiguration.setAllowedOrigins(List.of("*"));
                     corsConfiguration.setAllowCredentials(false);
                     return corsConfiguration;

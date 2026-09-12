@@ -6,8 +6,8 @@ import com.LoyaltyEngine.UserService.models.dto.UserDTO;
 import org.springframework.stereotype.Component;
 
 @Component
-public interface UserMapper {
-    default User domainToEntity(UserDomain domain) {
+public class UserMapper {
+    public User domainToEntity(UserDomain domain) {
         User user = new User();
         user.setCreatedAt(domain.getCreatedAt());
         user.setEmail(domain.getEmail());
@@ -21,7 +21,7 @@ public interface UserMapper {
         return user;
     }
 
-    default UserDomain entityToDomain(User entity) {
+    public UserDomain entityToDomain(User entity) {
         return UserDomain.restoreFromExisting(
                 entity.getId(),
                 entity.getEmail(),
@@ -34,7 +34,7 @@ public interface UserMapper {
         );
     }
 
-    default UserDTO domainToDto(UserDomain domain) {
+    public UserDTO domainToDto(UserDomain domain) {
         return new UserDTO(
           domain.getId().value(),
           domain.getEmail(),

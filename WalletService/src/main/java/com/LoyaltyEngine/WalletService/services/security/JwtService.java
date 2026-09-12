@@ -24,12 +24,4 @@ public class JwtService {
                 .parseSignedClaims(token)
                 .getPayload();
     }
-
-    public String getRoleFromToken(String token) {
-        return getClaimsFromToken(token).get("role").toString();
-    }
-
-    public String getEmailFromToken(String token) {
-        return getClaimsFromToken(token).getSubject();
-    }
 }

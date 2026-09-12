@@ -1,8 +1,6 @@
 package com.LoyaltyEngine.WalletService.services.configs;
 
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
-import com.LoyaltyEngine.WalletService.models.events.UserResponseEventModel;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
@@ -57,30 +55,6 @@ public class KafkaListenerConfig {
         containerFactory.setConsumerFactory(calculatedCashbackEventModelConsumerFactory());
         containerFactory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         containerFactory.setCommonErrorHandler(errorHandler());
-
-        return containerFactory;
-    }
-
-    @Bean
-    public ConsumerFactory<UUID, UserResponseEventModel> userResponseEventModelConsumerFactory() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
-        props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
-
-        return new DefaultKafkaConsumerFactory<>(
-                props,
-                new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>(UserResponseEventModel.class, false)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<UUID, UserResponseEventModel> userResponseEventModelConcurrentKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<UUID, UserResponseEventModel> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
-        containerFactory.setCommonErrorHandler(errorHandler());
-        containerFactory.setConsumerFactory(userResponseEventModelConsumerFactory());
 
         return containerFactory;
     }
