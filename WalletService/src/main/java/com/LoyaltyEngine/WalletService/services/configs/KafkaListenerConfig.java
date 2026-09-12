@@ -60,6 +60,29 @@ public class KafkaListenerConfig {
     }
 
     @Bean
+    public ConsumerFactory<UUID, UUID> userCreatedConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new UUIDDeserializer(),
+                new UUIDDeserializer()
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<UUID, UUID> userCreatedKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, UUID> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
+        containerFactory.setCommonErrorHandler(errorHandler());
+        containerFactory.setConsumerFactory(userCreatedConsumerFactory());
+
+        return containerFactory;
+    }
+
+    @Bean
     public DefaultErrorHandler errorHandler() {
         ExponentialBackOffWithMaxRetries backOffWithMaxRetries = new ExponentialBackOffWithMaxRetries(3);
         backOffWithMaxRetries.setMaxInterval(4000L);

@@ -21,7 +21,7 @@ public class Wallet {
     @Column(nullable = false)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private UUID userId;
 
     @Column(nullable = false)

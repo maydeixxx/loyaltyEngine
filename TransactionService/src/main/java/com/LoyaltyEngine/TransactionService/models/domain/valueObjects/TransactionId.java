@@ -19,10 +19,6 @@ public record TransactionId(UUID value) {
         return new TransactionId(id);
     }
 
-    public static TransactionId fromString(String stringId) {
-        return new TransactionId(UUID.fromString(stringId));
-    }
-
     @Override
     public String toString() {
         return value.toString();

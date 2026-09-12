@@ -13,8 +13,4 @@ public record UserId(UUID value) {
         return new UserId(value);
     }
 
-    public static UserId fromString(String value) {
-        return new UserId(UUID.fromString(value));
-    }
-
 }

@@ -15,7 +15,9 @@ import com.LoyaltyEngine.UserService.services.security.JwtService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -27,15 +29,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
-    private final UserRepository userRepository;
+    @Value("${kafka.topics.user-created}")
+    private String userCreatedTopic;
+    private final KafkaTemplate<UUID, UUID> userCreatedKafkaTemplate;
+
     private final UserMapper userMapper;
+    private final UserRepository userRepository;
+
     private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public UserDomain createUser(CreateUserDTO userDTO) {
         try {
             UserDomain newUser = UserDomain.createUser(userDTO.email(), userDTO.firstName(), userDTO.lastName(), passwordEncoder.encode(userDTO.password()));
-            return userMapper.entityToDomain(userRepository.save(userMapper.domainToEntity(newUser)));
+            userRepository.save(userMapper.domainToEntity(newUser));
+
+            userCreatedKafkaTemplate.send(userCreatedTopic, newUser.getId().value(), newUser.getId().value());
+            return newUser;
         } catch (DataIntegrityViolationException e) {
             log.error("Email {} already registered", userDTO.email());
             throw new CreateUserException("Email [%s] already registered".formatted(userDTO.email()));

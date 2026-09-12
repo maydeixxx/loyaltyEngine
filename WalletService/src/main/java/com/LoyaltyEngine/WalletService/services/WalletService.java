@@ -2,6 +2,7 @@ package com.LoyaltyEngine.WalletService.services;
 
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
+import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
 import com.LoyaltyEngine.WalletService.models.domain.enums.TransactionType;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
@@ -33,7 +34,13 @@ public class WalletService {
 
     public void createWallet(UUID userId) {
         try {
+            boolean isWalletPresent = walletRepository.findWalletByUserId(userId).isPresent();
+            if (isWalletPresent) {
+                throw new WalletExistsException("Wallet for user [%s] already created".formatted(userId));
+            }
             walletRepository.save(walletMapper.domainToEntity(WalletDomain.createWallet(userId)));
+        } catch (WalletExistsException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error creating wallet for user {}: {}", userId, e.getMessage());
             throw new RuntimeException(e);

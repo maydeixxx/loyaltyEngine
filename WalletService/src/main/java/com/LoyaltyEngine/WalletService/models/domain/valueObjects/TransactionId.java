@@ -8,7 +8,7 @@ import java.util.UUID;
 public record TransactionId(UUID value) {
 
     public TransactionId {
-        Objects.requireNonNull(value(), "Transaction id cant be null");
+        Objects.requireNonNull(value, "Transaction id cant be null");
     }
 
     @Override

@@ -61,12 +61,12 @@ public class CashbackRuleDomain {
     }
 
     public void updateCategory(String category) {
-        if (this.category.equals(category) || category.isBlank()) throw new IllegalArgumentException("Cant change category");
+        if (category.isBlank() || this.category.equals(category)) throw new IllegalArgumentException("Cant change category");
         this.category = category;
     }
 
     public void updatePercentage(BigDecimal percentage) {
-        if (this.percentage.equals(percentage) || percentage.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("Cant change percentage");
+        if (percentage == null || this.percentage.equals(percentage) || percentage.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("Cant change percentage");
         this.percentage = percentage;
     }
 

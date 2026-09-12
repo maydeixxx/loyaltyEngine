@@ -2,6 +2,7 @@ package com.LoyaltyEngine.WalletService.services;
 
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
+import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,28 @@ public class WalletConsumer {
             ack.acknowledge();
         } catch (Exception e) {
             log.error("Error processing cashback for transaction {} : {}", transactionId, e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.user-created}",
+            groupId = "wallet_service",
+            containerFactory = "userCreatedKafkaListenerContainerFactory"
+    )
+    public void handleUserCreatedEvent(ConsumerRecord<UUID, UUID> record) {
+        UUID userId = record.value();
+
+        if (userId == null) {
+            throw new NullPointerException("User id is null");
+        }
+
+        try {
+            walletService.createWallet(userId);
+        } catch (WalletExistsException e) {
+            log.warn("Wallet for user [{}] already created", userId);
+        } catch (Exception e) {
+            log.error("Error handling user created event: {}", e.getMessage());
             throw new RuntimeException(e);
         }
     }

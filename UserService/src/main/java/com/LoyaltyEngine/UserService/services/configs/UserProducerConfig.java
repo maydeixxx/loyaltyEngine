@@ -1,6 +1,5 @@
 package com.LoyaltyEngine.UserService.services.configs;
 
-import com.LoyaltyEngine.UserService.models.eventModels.UserResponseEventModel;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.UUIDSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,27 +20,26 @@ public class UserProducerConfig {
     private String bootstrapServers;
 
     @Bean
-    public ProducerFactory<UUID, UserResponseEventModel> userResponseEventModelProducerFactory() {
+    public ProducerFactory<UUID, UUID> userCreatedProducerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 15000);
         props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
-        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
-        props.put(JacksonJsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, UUIDSerializer.class);
 
         return new DefaultKafkaProducerFactory<>(
                 props,
                 new UUIDSerializer(),
-                new JacksonJsonSerializer<>()
+                new UUIDSerializer()
         );
     }
 
     @Bean
-    public KafkaTemplate<UUID, UserResponseEventModel> userResponseEventModelKafkaTemplate() {
-        return new KafkaTemplate<>(userResponseEventModelProducerFactory());
+    public KafkaTemplate<UUID, UUID> userCreatedKafkaTemplate() {
+        return new KafkaTemplate<>(userCreatedProducerFactory());
     }
 
     @Bean
