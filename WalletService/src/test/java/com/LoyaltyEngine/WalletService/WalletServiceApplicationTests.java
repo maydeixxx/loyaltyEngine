@@ -7,9 +7,6 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @Disabled
-@TestPropertySource(properties = {
-		"eureka.client.enabled=false"
-})
 class WalletServiceApplicationTests {
 
 	@Test

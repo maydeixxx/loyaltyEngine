@@ -1,9 +1,6 @@
 package com.LoyaltyEngine.WalletService.api;
 
-import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
-import com.LoyaltyEngine.WalletService.exceptions.InvalidArgumentException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
+import com.LoyaltyEngine.WalletService.exceptions.*;
 import com.LoyaltyEngine.WalletService.models.dto.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,6 +47,12 @@ public class WalletExceptionHandler {
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientFundsException(InsufficientFundsException ex, WebRequest request) {
         ErrorResponse errorResponse = buildErrorResponse(400, "Insufficent funds", ex.getMessage(), request);
+        return ResponseEntity.status(errorResponse.code()).body(errorResponse);
+    }
+
+    @ExceptionHandler(WalletExistsException.class)
+    public ResponseEntity<ErrorResponse> handleWalletExistsException(WalletExistsException ex, WebRequest request) {
+        ErrorResponse errorResponse = buildErrorResponse(409, "wallet exists", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
