@@ -96,7 +96,7 @@ public class WalletService {
 
                 walletTransactionRepository.save(walletTransactionMapper.domainToEntity(walletTransaction));
                 walletRepository.save(walletMapper.domainToEntity(wallet));
-                log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amount);
+                log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amountOfTransaction);
             }
         } catch (InsufficientFundsException | WalletBlockedException | WalletNotFoundException e) {
             throw e;
@@ -114,6 +114,8 @@ public class WalletService {
 
             walletRepository.save(walletMapper.domainToEntity(wallet));
             log.info("Wallet {} blocked", wallet.getId().value());
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error blocking wallet: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -129,6 +131,8 @@ public class WalletService {
 
             walletRepository.save(walletMapper.domainToEntity(wallet));
             log.info("Wallet {} unblocked", wallet.getId().value());
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error activating wallet: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -158,7 +162,7 @@ public class WalletService {
         }
     }
 
-    private WalletDomain findWalletByUserId(UUID userId) {
+    public WalletDomain findWalletByUserId(UUID userId) {
         try {
             return walletMapper.entityToDomain(walletRepository
                     .findWalletByUserId(userId)
