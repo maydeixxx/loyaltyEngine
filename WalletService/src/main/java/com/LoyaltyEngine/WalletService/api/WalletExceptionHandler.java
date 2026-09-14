@@ -20,6 +20,12 @@ public class WalletExceptionHandler {
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        ErrorResponse errorResponse = buildErrorResponse(400, "Illegal argument", ex.getMessage(), request);
+        return ResponseEntity.status(errorResponse.code()).body(errorResponse);
+    }
+
     @ExceptionHandler(WalletBlockedException.class)
     public ResponseEntity<ErrorResponse> handleWalletBlockedException(WalletBlockedException ex, WebRequest request) {
         ErrorResponse errorResponse = buildErrorResponse(409, "Wallet is blocked", ex.getMessage(), request);
@@ -46,13 +52,13 @@ public class WalletExceptionHandler {
 
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientFundsException(InsufficientFundsException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildErrorResponse(400, "Insufficent funds", ex.getMessage(), request);
+        ErrorResponse errorResponse = buildErrorResponse(400, "Insufficient funds", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(WalletExistsException.class)
     public ResponseEntity<ErrorResponse> handleWalletExistsException(WalletExistsException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildErrorResponse(409, "wallet exists", ex.getMessage(), request);
+        ErrorResponse errorResponse = buildErrorResponse(409, "Wallet exists", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
