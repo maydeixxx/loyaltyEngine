@@ -112,7 +112,7 @@ public class WalletControllerTests {
 
         //then
         JsonNode response = objectMapper.readTree(mvcResult);
-        Assertions.assertEquals("wallet exists", response.get("error").asText());
+        Assertions.assertEquals("Wallet exists", response.get("error").asText());
     }
 
     @Test

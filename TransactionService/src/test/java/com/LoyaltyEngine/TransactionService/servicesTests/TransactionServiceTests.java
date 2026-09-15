@@ -18,7 +18,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,8 +37,6 @@ public class TransactionServiceTests {
 
     @Autowired
     private TransactionService transactionService;
-
-    private static final Currency currency = Currency.getInstance("USD");
 
     private final List<TransactionItemDomain> items = List.of(
             TransactionItemDomain.createTransactionItem("ELECTRONICS", "LAPTOP", new BigDecimal("102.2"))
