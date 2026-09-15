@@ -27,6 +27,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -44,6 +45,9 @@ import java.util.concurrent.TimeUnit;
 
 @SpringBootTest
 @Testcontainers
+@TestPropertySource(properties = {
+        "eureka.client.enabled=false"
+})
 public class OutboxEventPublisherTests {
     @Autowired
     TransactionService transactionService;
