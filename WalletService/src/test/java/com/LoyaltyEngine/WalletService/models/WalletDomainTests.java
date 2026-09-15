@@ -4,45 +4,16 @@ import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
-import com.LoyaltyEngine.WalletService.models.entity.Wallet;
-import com.LoyaltyEngine.WalletService.services.WalletService;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@SpringBootTest
-@TestPropertySource(properties = {
-        "eureka.client.enabled=false"
-})
-@Testcontainers
 public class WalletDomainTests {
-    @Container
-    private static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18.2");
-    @Autowired
-    private WalletService walletService;
-    @Autowired
-    private WalletRepository walletRepository;
-
-    @DynamicPropertySource
-    private static void configProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
 
     @Test
     @DisplayName("Создание walletDomain")
@@ -122,11 +93,10 @@ public class WalletDomainTests {
     void restoreFromExistingWallet() {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
-        walletService.createWallet(userId);
-        Wallet wallet = walletRepository.findWalletByUserId(userId).get();
+        WalletDomain wallet = WalletDomain.createWallet(userId);
 
-        UUID walletId = wallet.getId();
-        BigDecimal amount = wallet.getBalance();
+        UUID walletId = wallet.getId().value();
+        BigDecimal amount = wallet.getBalance().amount();
         WalletStatus status = wallet.getStatus();
         Long version = wallet.getVersion();
         LocalDateTime createdAt = wallet.getCreatedAt();
@@ -237,9 +207,16 @@ public class WalletDomainTests {
     void walletEquals() {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
-        walletService.createWallet(userId);
-        WalletDomain wallet = walletService.findWalletByUserId(userId);
-        WalletDomain wallet1 = walletService.findWalletByUserId(userId);
+        WalletDomain wallet = WalletDomain.createWallet(userId);
+
+        UUID walletId = wallet.getId().value();
+        BigDecimal amount = wallet.getBalance().amount();
+        WalletStatus status = wallet.getStatus();
+        Long version = wallet.getVersion();
+        LocalDateTime createdAt = wallet.getCreatedAt();
+        LocalDateTime updatedAt = wallet.getUpdatedAt();
+
+        WalletDomain wallet1 = WalletDomain.restoreFromExisting(walletId, userId, amount, status, version, createdAt, updatedAt);
         wallet1.updateUpdatedAt(LocalDateTime.now());
 
         //when && then
