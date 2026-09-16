@@ -9,15 +9,18 @@ import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
+import com.LoyaltyEngine.UserService.models.entity.OutboxEvent;
+import com.LoyaltyEngine.UserService.models.enums.OutboxStatus;
+import com.LoyaltyEngine.UserService.services.interfaces.OutboxEventRepository;
 import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
 import com.LoyaltyEngine.UserService.services.security.JwtService;
+import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +34,8 @@ import java.util.UUID;
 public class UserService {
     @Value("${kafka.topics.user-created}")
     private String userCreatedTopic;
-    private final KafkaTemplate<UUID, UUID> userCreatedKafkaTemplate;
+
+    private final OutboxEventRepository outboxEventRepository;
 
     private final UserMapper userMapper;
     private final UserRepository userRepository;
@@ -44,7 +48,17 @@ public class UserService {
             UserDomain newUser = UserDomain.createUser(userDTO.email(), userDTO.firstName(), userDTO.lastName(), passwordEncoder.encode(userDTO.password()));
             userRepository.save(userMapper.domainToEntity(newUser));
 
-            userCreatedKafkaTemplate.send(userCreatedTopic, newUser.getId().value(), newUser.getId().value());
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .eventType(userCreatedTopic)
+                    .retryCount(0)
+                    .status(OutboxStatus.NEW)
+                    .aggregateId(newUser.getId().value())
+                    .createdAt(LocalDateTime.now())
+                    .payload(newUser.getId().value().toString())
+                    .build();
+
+            outboxEventRepository.save(event);
             return newUser;
         } catch (DataIntegrityViolationException e) {
             log.error("Email {} already registered", userDTO.email());
@@ -104,7 +118,12 @@ public class UserService {
                 case EMAIL -> user.updateEmail(updateUserDTO.email());
                 case LAST_NAME -> user.updateLastName(updateUserDTO.lastName());
                 case FIRST_NAME -> user.updateFirstName(updateUserDTO.firstName());
-                case PASSWORD -> user.updatePassword(passwordEncoder.encode(updateUserDTO.password()));
+                case PASSWORD -> {
+                    if (updateUserDTO.oldPassword() == null || updateUserDTO.oldPassword().isBlank() || !passwordEncoder.matches(updateUserDTO.oldPassword(), user.getPasswordHash().value())) throw new UserUpdateException("Password null or incorrect");
+                    if (passwordEncoder.matches(updateUserDTO.newPassword(), user.getPasswordHash().value())) throw new IllegalArgumentException("New password cant be the same as old");
+
+                    user.updatePassword(passwordEncoder.encode(updateUserDTO.newPassword()));
+                }
                 default -> throw new UserUpdateException("Unknown field to update");
             }
 

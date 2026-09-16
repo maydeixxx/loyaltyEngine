@@ -79,10 +79,12 @@ public class TransactionDomain {
     }
 
     public void rejectTransaction() {
+        if (!this.status.equals(Status.NEW)) throw new IllegalArgumentException("Can change status only from new");
         this.status = Status.REJECTED;
     }
 
     public void completeTransaction() {
+        if (!this.status.equals(Status.NEW)) throw new IllegalArgumentException("Can change status only from new");
         this.status = Status.PROCESSED;
     }
 

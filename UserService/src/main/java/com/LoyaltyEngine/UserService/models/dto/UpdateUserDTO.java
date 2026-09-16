@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.UserService.models.dto;
 
-import com.LoyaltyEngine.UserService.models.domain.enums.FieldToUpdate;
+import com.LoyaltyEngine.UserService.models.enums.FieldToUpdate;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 
@@ -16,5 +16,6 @@ public record UpdateUserDTO(
         String lastName,
 
         @Size(min = 8, max = 25, message = "password must be between 8 and 25 characters")
-        String password
+        String newPassword,
+        String oldPassword
 ) {}

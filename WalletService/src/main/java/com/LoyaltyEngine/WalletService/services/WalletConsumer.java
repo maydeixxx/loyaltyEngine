@@ -70,12 +70,12 @@ public class WalletConsumer {
             groupId = "wallet_service",
             containerFactory = "userCreatedKafkaListenerContainerFactory"
     )
-    public void handleUserCreatedEvent(ConsumerRecord<UUID, UUID> record) {
-        UUID userId = record.value();
-
-        if (userId == null) {
+    public void handleUserCreatedEvent(ConsumerRecord<UUID, String> record) {
+        if (record.value() == null || record.value().isBlank()) {
             throw new NullPointerException("User id is null");
         }
+
+        UUID userId = UUID.fromString(record.value());
 
         try {
             walletService.createWallet(userId);

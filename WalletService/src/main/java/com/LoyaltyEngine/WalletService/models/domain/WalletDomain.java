@@ -53,11 +53,13 @@ public class WalletDomain {
     public void activateWallet() {
         if (this.status.equals(WalletStatus.ACTIVE)) throw new IllegalArgumentException("Wallet already active");
         this.status = WalletStatus.ACTIVE;
+        updateUpdatedAt(LocalDateTime.now());
     }
 
     public void blockWallet() {
         if (this.status.equals(WalletStatus.BLOCKED)) throw new IllegalArgumentException("Wallet already blocked");
         this.status = WalletStatus.BLOCKED;
+        updateUpdatedAt(LocalDateTime.now());
     }
 
     public void suspendWallet() {

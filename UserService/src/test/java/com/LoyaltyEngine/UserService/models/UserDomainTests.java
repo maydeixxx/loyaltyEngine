@@ -3,7 +3,7 @@ package com.LoyaltyEngine.UserService.models;
 import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.exceptions.UserValidationException;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
-import com.LoyaltyEngine.UserService.models.domain.enums.Role;
+import com.LoyaltyEngine.UserService.models.enums.Role;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;

@@ -48,7 +48,7 @@ public class RuleEngineService {
         CashbackRuleDomain cashbackRuleById = ruleEngineMapper.entityToDomain(ruleEngineRepository.findById(id).orElseThrow(() -> new CashbackRuleNotFoundException("Rule not found: " + id)));
 
         if (newValue.category() != null) {
-            cashbackRuleById.updateCategory(newValue.category());
+            cashbackRuleById.updateCategory(newValue.category().toLowerCase().trim());
         }
 
         if (newValue.percentage() != null) {

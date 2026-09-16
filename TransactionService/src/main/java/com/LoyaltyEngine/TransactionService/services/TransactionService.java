@@ -26,7 +26,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -94,11 +93,18 @@ public class TransactionService {
     }
 
     public TransactionDomain getTransactionById(UUID id) {
-        return transactionMapper
-                .transactionEntityToDomain(transactionRepository
-                        .getTransactionById(id)
-                        .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", id)))
-                );
+        try {
+            return transactionMapper
+                    .transactionEntityToDomain(transactionRepository
+                            .getTransactionById(id)
+                            .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", id)))
+                    );
+        } catch (TransactionNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     public Optional<TransactionDomain> getTransactionByIdempotencyKey(UUID idempotencyKey) {
@@ -118,14 +124,30 @@ public class TransactionService {
                     .toList();
         } catch (DataException e) {
             throw new TransactionRepositoryException("Error getting transaction", e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Transactional
     public void updateStatus(Status status, UUID transactionId) {
-        transactionRepository
-                .getTransactionById(transactionId)
-                .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", transactionId)))
-                .setStatus(status);
+        try {
+            TransactionDomain transaction = transactionMapper.transactionEntityToDomain(transactionRepository
+                    .getTransactionById(transactionId)
+                    .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", transactionId))));
+
+            switch (status) {
+                case PROCESSED -> transaction.completeTransaction();
+                case REJECTED -> transaction.rejectTransaction();
+            }
+
+            transactionRepository.save(transactionMapper.transactionDomainToEntity(transaction));
+        } catch (TransactionNotFoundException | IllegalArgumentException e) {
+            log.error(e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -2,7 +2,7 @@ package com.LoyaltyEngine.UserService.models.domain;
 
 import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.exceptions.UserValidationException;
-import com.LoyaltyEngine.UserService.models.domain.enums.Role;
+import com.LoyaltyEngine.UserService.models.enums.Role;
 import com.LoyaltyEngine.UserService.models.domain.valueObjects.HashedPassword;
 import com.LoyaltyEngine.UserService.models.domain.valueObjects.UserId;
 import lombok.*;

@@ -58,6 +58,10 @@ public class WalletService {
 
             Money balance = wallet.getBalance();
             if (useCashback && balance.isGreaterThan(Money.zeroOf())) {
+                if (amountOfTransaction.compareTo(totalItemPrice) > 0) {
+                    throw new IllegalArgumentException("Amount of transaction cant be greater than total item price");
+                }
+
                 Money cashbackToUse = new Money(totalItemPrice.subtract(amountOfTransaction));
 
                 if (balance.isLessThan(cashbackToUse)) {
@@ -98,7 +102,7 @@ public class WalletService {
                 walletRepository.save(walletMapper.domainToEntity(wallet));
                 log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amountOfTransaction);
             }
-        } catch (InsufficientFundsException | WalletBlockedException | WalletNotFoundException e) {
+        } catch (InsufficientFundsException | WalletBlockedException | WalletNotFoundException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error crediting points to user {}: {}", userId, e.getMessage());
