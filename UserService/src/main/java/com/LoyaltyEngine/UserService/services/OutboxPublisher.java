@@ -25,7 +25,7 @@ public class OutboxPublisher {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @Scheduled(fixedRate = 5L, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedDelay = 5L, timeUnit = TimeUnit.SECONDS)
     public void handleOutboxEvents() {
         try {
             List<OutboxEvent> outboxEvents = outboxEventRepository.findOutboxEvents(OutboxStatus.NEW, PageRequest.of(0, 50));

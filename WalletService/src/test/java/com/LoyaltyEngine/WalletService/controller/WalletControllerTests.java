@@ -1,7 +1,7 @@
 package com.LoyaltyEngine.WalletService.controller;
 
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
-import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
+import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.dto.CreateWalletDTO;
 import com.LoyaltyEngine.WalletService.models.entity.Wallet;
 import com.LoyaltyEngine.WalletService.services.WalletService;

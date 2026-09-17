@@ -6,10 +6,11 @@ import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
-import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
+import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.services.WalletService;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Assertions;
@@ -88,7 +89,7 @@ public class WalletServiceTests {
 
     @Test
     @DisplayName("Успешная оплата без использования кешбека")
-    void successfulCreditPoints() {
+    void successfulCreditPoints() throws JsonProcessingException {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -160,7 +161,7 @@ public class WalletServiceTests {
 
     @Test
     @DisplayName("Успешная оплата c использованием кешбека")
-    void successfulCreditPointsWithCashback() {
+    void successfulCreditPointsWithCashback() throws JsonProcessingException {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -308,7 +309,7 @@ public class WalletServiceTests {
 
     @Test
     @DisplayName("Успешный поиск транзакций кошелька")
-    void successfulGetTransactionHistory() {
+    void successfulGetTransactionHistory() throws JsonProcessingException {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);

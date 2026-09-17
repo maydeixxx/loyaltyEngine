@@ -3,7 +3,7 @@ package com.LoyaltyEngine.WalletService.models;
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
-import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
+import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;

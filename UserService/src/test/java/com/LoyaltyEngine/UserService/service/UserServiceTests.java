@@ -207,7 +207,7 @@ public class UserServiceTests {
     void successfulUpdateFirstName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, "NewName", null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, "NewName", null, null, null);
 
         //when
         userService.updateUser(user.getEmail(), updateDTO);
@@ -222,7 +222,7 @@ public class UserServiceTests {
     void successfulUpdateLastName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.LAST_NAME, null, null, "NewLastName", null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.LAST_NAME, null, null, "NewLastName", null, null);
 
         //when
         userService.updateUser(user.getEmail(), updateDTO);
@@ -238,7 +238,7 @@ public class UserServiceTests {
         //given
         UserDomain user = userService.createUser(createUserDTO);
         String newEmail = "newemail@gmail.com";
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.EMAIL, newEmail, null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.EMAIL, newEmail, null, null, null, null);
 
         //when
         userService.updateUser(user.getEmail(), updateDTO);
@@ -254,7 +254,7 @@ public class UserServiceTests {
         //given
         UserDomain user = userService.createUser(createUserDTO);
         String newPassword = "NewPassword123!!!";
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.PASSWORD, null, null, null, newPassword);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.PASSWORD, null, null, null, newPassword, createUserDTO.password());
 
         //when
         userService.updateUser(user.getEmail(), updateDTO);
@@ -269,7 +269,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateSameEmail() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.EMAIL, createUserDTO.email(), null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.EMAIL, createUserDTO.email(), null, null, null, null);
 
         //when && then
         Assertions.assertThrows(UserUpdateException.class, () -> userService.updateUser(user.getEmail(), updateDTO), "You cant enter the same email");
@@ -280,7 +280,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateSameFirstName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, createUserDTO.firstName(), null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, createUserDTO.firstName(), null, null, null);
 
         //when && then
         Assertions.assertThrows(UserUpdateException.class, () -> userService.updateUser(user.getEmail(), updateDTO), "You already have this first name");
@@ -291,7 +291,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateSameLastName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.LAST_NAME, null, null, createUserDTO.lastName(), null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.LAST_NAME, null, null, createUserDTO.lastName(), null, null);
 
         //when && then
         Assertions.assertThrows(UserUpdateException.class, () -> userService.updateUser(user.getEmail(), updateDTO), "You already have this last name");
@@ -302,7 +302,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateUserNotFound() {
         //given
         String email = "unknown@gmail.com";
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, "NewName", null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, "NewName", null, null, null);
 
         //when && then
         Assertions.assertThrows(UserNotFoundException.class, () -> userService.updateUser(email, updateDTO), "User by email [%s] not found".formatted(email));

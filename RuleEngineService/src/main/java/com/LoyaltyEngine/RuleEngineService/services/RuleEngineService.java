@@ -25,7 +25,7 @@ public class RuleEngineService {
     private final RuleEngineMapper ruleEngineMapper;
     private final BigDecimal basePercentage = new BigDecimal("1.0");
 
-    @Cacheable(value = "cashback_rules", key = "#category")
+    @Cacheable(value = "cashback_rules", key = "#category.toLowerCase().trim()")
     public BigDecimal getPercentageForCategory(String category) {
         LocalDateTime now = LocalDateTime.now();
         Optional<BigDecimal> cashbackRule = ruleEngineRepository.findActivePercentageByCategory(category.toLowerCase().trim(), now);

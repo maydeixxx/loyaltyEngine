@@ -43,6 +43,7 @@ public class UserService {
     private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    @Transactional
     public UserDomain createUser(CreateUserDTO userDTO) {
         try {
             UserDomain newUser = UserDomain.createUser(userDTO.email(), userDTO.firstName(), userDTO.lastName(), passwordEncoder.encode(userDTO.password()));
@@ -110,6 +111,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void updateUser(String email, UpdateUserDTO updateUserDTO) {
         try {
             UserDomain user = userMapper.entityToDomain(userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));

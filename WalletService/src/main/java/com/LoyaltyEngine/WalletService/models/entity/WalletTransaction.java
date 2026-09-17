@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.WalletService.models.entity;
 
-import com.LoyaltyEngine.WalletService.models.domain.enums.TransactionType;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +23,7 @@ public class WalletTransaction {
 
     @Column(nullable = false)
     private UUID walletId;
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private UUID transactionId;
 
     @Column(nullable = false)

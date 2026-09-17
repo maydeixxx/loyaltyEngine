@@ -2,7 +2,7 @@ package com.LoyaltyEngine.WalletService.models.domain;
 
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
-import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
+import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.UserId;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.WalletId;
@@ -65,6 +65,7 @@ public class WalletDomain {
     public void suspendWallet() {
         if (this.status.equals(WalletStatus.SUSPENDED)) throw new IllegalArgumentException("Wallet already suspended");
         this.status = WalletStatus.SUSPENDED;
+        updateUpdatedAt(LocalDateTime.now());
     }
 
     public void updateUpdatedAt(LocalDateTime time) {
