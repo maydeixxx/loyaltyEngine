@@ -5,7 +5,6 @@ import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
 import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
-import com.LoyaltyEngine.UserService.models.enums.FieldToUpdate;
 import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;

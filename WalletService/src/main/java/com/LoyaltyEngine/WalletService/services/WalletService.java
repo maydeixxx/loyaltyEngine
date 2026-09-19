@@ -14,6 +14,7 @@ import com.LoyaltyEngine.WalletService.models.events.TransactionHandledEvent;
 import com.LoyaltyEngine.WalletService.services.interfaces.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.uuid.UuidCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -123,6 +124,7 @@ public class WalletService {
 
             TransactionHandledEvent transactionHandledEvent = new TransactionHandledEvent(transactionId, userId);
             OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
                     .aggregateId(transactionId)
                     .eventType(transactionHandled)
                     .payload(mapper.writeValueAsString(transactionHandledEvent))
@@ -133,7 +135,25 @@ public class WalletService {
 
             outboxEventRepository.save(event);
         } catch (IllegalArgumentException | WalletNotFoundException e) {
-            throw e;
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    "Wallet for %s not found".formatted(userId),
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(pointsFailed)
+                    .payload(mapper.writeValueAsString(pointsFailedEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
         } catch (WalletBlockedException e) {
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
@@ -144,6 +164,7 @@ public class WalletService {
             );
 
             OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
                     .aggregateId(transactionId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
@@ -163,6 +184,7 @@ public class WalletService {
             );
 
             OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
                     .aggregateId(transactionId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
@@ -174,7 +196,25 @@ public class WalletService {
             outboxEventRepository.save(event);
         } catch (Exception e) {
             log.error("Error crediting points to user {}: {}", userId, e.getMessage());
-            throw new RuntimeException(e);
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    "Unknown error",
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(pointsFailed)
+                    .payload(mapper.writeValueAsString(pointsFailedEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
         }
     }
 

@@ -1,11 +1,12 @@
 package com.LoyaltyEngine.UserService.models.dto;
 
-import com.LoyaltyEngine.UserService.models.enums.FieldToUpdate;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdateUserDTO(
-        FieldToUpdate fieldToUpdate,
+        @NotNull(message = "Field to update is required")
+        String fieldToUpdate,
 
         @Email(message = "email is not valid")
         String email,

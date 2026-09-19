@@ -1,7 +1,6 @@
 package com.LoyaltyEngine.UserService.controller;
 
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
-import com.LoyaltyEngine.UserService.models.enums.FieldToUpdate;
 import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;

@@ -114,13 +114,17 @@ public class UserService {
     @Transactional
     public void updateUser(String email, UpdateUserDTO updateUserDTO) {
         try {
+            if (updateUserDTO.fieldToUpdate() == null) {
+                throw new NullPointerException("Field to update is required");
+            }
+
             UserDomain user = userMapper.entityToDomain(userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
 
-            switch (updateUserDTO.fieldToUpdate()) {
-                case EMAIL -> user.updateEmail(updateUserDTO.email());
-                case LAST_NAME -> user.updateLastName(updateUserDTO.lastName());
-                case FIRST_NAME -> user.updateFirstName(updateUserDTO.firstName());
-                case PASSWORD -> {
+            switch (updateUserDTO.fieldToUpdate().toLowerCase().trim()) {
+                case "email" -> user.updateEmail(updateUserDTO.email());
+                case "lastname" -> user.updateLastName(updateUserDTO.lastName());
+                case "firstname" -> user.updateFirstName(updateUserDTO.firstName());
+                case "password" -> {
                     if (updateUserDTO.oldPassword() == null || updateUserDTO.oldPassword().isBlank() || !passwordEncoder.matches(updateUserDTO.oldPassword(), user.getPasswordHash().value())) throw new UserUpdateException("Password null or incorrect");
                     if (passwordEncoder.matches(updateUserDTO.newPassword(), user.getPasswordHash().value())) throw new IllegalArgumentException("New password cant be the same as old");
 
@@ -131,7 +135,7 @@ public class UserService {
 
             user.updateUpdatedAt(LocalDateTime.now());
             userRepository.save(userMapper.domainToEntity(user));
-        } catch (UserNotFoundException | UserUpdateException e) {
+        } catch (UserNotFoundException | UserUpdateException | NullPointerException e) {
             log.error(e.getMessage());
             throw e;
         } catch (Exception e) {
