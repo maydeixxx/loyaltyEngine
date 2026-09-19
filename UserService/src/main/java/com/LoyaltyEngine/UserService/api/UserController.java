@@ -4,12 +4,15 @@ import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UserDTO;
+import com.LoyaltyEngine.UserService.models.enums.Role;
 import com.LoyaltyEngine.UserService.services.UserService;
 import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
+import com.LoyaltyEngine.UserService.services.security.UserSecurity;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,25 +57,20 @@ public class UserController {
     }
 
     @GetMapping()
-    public ResponseEntity<UserDTO> getSelf() {
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getPrincipal()
-                .toString();
-
-        UserDTO user = userMapper.domainToDto(userService.findUserByEmail(email));
+    public ResponseEntity<UserDTO> getSelf(@AuthenticationPrincipal UserSecurity userSecurity) {
+        UserDTO user = userMapper.domainToDto(userService.findUserByEmail(userSecurity.email()));
         return ResponseEntity.ok(user);
     }
 
     @DeleteMapping("/{email}")
-    @PreAuthorize("authentication.name == #email or hasRole('ADMIN')")
+    @PreAuthorize("authentication.principal.email == #email or hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable String email) {
         userService.deleteUser(email);
         return ResponseEntity.status(204).build();
     }
 
     @PutMapping("/{email}")
-    @PreAuthorize("authentication.name == #email or hasRole('ADMIN')")
+    @PreAuthorize("authentication.principal.email == #email or hasRole('ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable String email, @RequestBody @Valid UpdateUserDTO userDTO) {
         userService.updateUser(email, userDTO);
         return ResponseEntity.status(204).build();

@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.TransactionService.services.security;
+package com.LoyaltyEngine.GatewayService;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -13,8 +13,8 @@ import javax.crypto.SecretKey;
 public class JwtService {
     private final SecretKey secretKey;
 
-    public JwtService(@Value("${jwt.secret-key}") String signingKey) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(signingKey));
+    public JwtService(@Value("${jwt.secret-key}") String jwtSecretKey) {
+        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecretKey));
     }
 
     public Claims getClaimsFromToken(String token) {
@@ -23,14 +23,5 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    public String getRoleFromToken(String token) {
-        Claims claimsFromToken = getClaimsFromToken(token);
-        return claimsFromToken.get("role").toString();
-    }
-
-    public String getEmailFromToken(String token) {
-        return getClaimsFromToken(token).getSubject();
     }
 }

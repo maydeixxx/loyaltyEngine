@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class TransactionController {
     private final TransactionMapper transactionMapper;
 
     @PostMapping()
+    @PreAuthorize("authentication.principal.userId == #transaction.userId()")
     public ResponseEntity<TransactionDTO> createTransaction(
             @RequestHeader(value = "X-IDEMPOTENCY-KEY") UUID idempotencyKey,
             @RequestBody @Valid CreateTransaction transaction
@@ -45,12 +47,14 @@ public class TransactionController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
     public ResponseEntity<List<TransactionDTO>> getTransactionsByUserId(@PathVariable UUID userId) {
         List<TransactionDTO> transactions = transactionService.getTransactionByUserId(userId).stream().map(transactionMapper::transactionDomainToDTO).toList();
         return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TransactionDTO> getTransactionById(@PathVariable UUID id) {
         TransactionDTO transactionById = transactionMapper.transactionDomainToDTO(transactionService.getTransactionById(id));
         return ResponseEntity.ok((transactionById));
