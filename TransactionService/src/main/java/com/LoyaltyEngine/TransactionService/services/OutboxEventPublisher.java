@@ -52,13 +52,11 @@ public class OutboxEventPublisher {
             } catch (Exception e) {
                 if (event.getRetryCount() >= 3) {
                     event.setStatus(OutboxStatus.FAILED);
-                    outboxEventRepository.save(event);
                 }
                 event.setRetryCount(event.getRetryCount() + 1);
                 outboxEventRepository.save(event);
 
                 log.error("Error sending message: {}", e.getMessage());
-                break;
             }
         }
     }

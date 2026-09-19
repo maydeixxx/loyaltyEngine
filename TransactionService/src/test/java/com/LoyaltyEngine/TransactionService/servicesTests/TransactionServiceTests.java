@@ -12,19 +12,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
 @SpringBootTest
 @Testcontainers
 @Transactional
+@TestPropertySource(properties = {
+        "eureka.client.enabled=false"
+})
 public class TransactionServiceTests {
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18.3");
@@ -38,8 +41,6 @@ public class TransactionServiceTests {
 
     @Autowired
     private TransactionService transactionService;
-
-    private static final Currency currency = Currency.getInstance("USD");
 
     private final List<TransactionItemDomain> items = List.of(
             TransactionItemDomain.createTransactionItem("ELECTRONICS", "LAPTOP", new BigDecimal("102.2"))

@@ -1,11 +1,12 @@
 package com.LoyaltyEngine.TransactionService.services.security;
 
-import com.LoyaltyEngine.TransactionService.exceptions.JwtCheckingException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,37 +14,37 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Component
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter {
-    private final JwtService jwtService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String header = request.getHeader("Authorization");
-        String jwt = null;
-        String email = null;
+    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
+        String email = request.getHeader("X-User-Email");
+        String userId = request.getHeader("X-User-Id");
+        String role = request.getHeader("X-User-Role");
 
-        if (header != null && header.startsWith("Bearer ")) {
-            jwt = header.replace("Bearer ", "");
+        if (email != null && userId != null && role != null && !email.isBlank() && !userId.isBlank() && !role.isBlank()) {
             try {
-                email = jwtService.getEmailFromToken(jwt);
+                String formattedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
+                List<SimpleGrantedAuthority> roles = List.of(new SimpleGrantedAuthority(formattedRole));
+                UserSecurity userSecurity = new UserSecurity(email, UUID.fromString(userId));
+
+                UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
+                        userSecurity,
+                        null,
+                        roles
+                );
+                SecurityContextHolder.getContext().setAuthentication(token);
             } catch (Exception e) {
-                throw new JwtCheckingException("Error while checking auth token");
+                log.error("Error filtering request: {}", e.getMessage());
             }
         }
-
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
-                    email,
-                    null,
-                    Collections.singleton(new SimpleGrantedAuthority(jwtService.getRoleFromToken(jwt)))
-            );
-            SecurityContextHolder.getContext().setAuthentication(token);
-        }
-
         filterChain.doFilter(request, response);
     }
 }

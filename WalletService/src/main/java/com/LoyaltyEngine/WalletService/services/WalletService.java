@@ -1,26 +1,30 @@
 package com.LoyaltyEngine.WalletService.services;
 
-import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
-import com.LoyaltyEngine.WalletService.models.domain.enums.TransactionType;
+import com.LoyaltyEngine.WalletService.exceptions.*;
+import com.LoyaltyEngine.WalletService.models.entity.OutboxEvent;
+import com.LoyaltyEngine.WalletService.models.entity.WalletTransaction;
+import com.LoyaltyEngine.WalletService.models.enums.OutboxStatus;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
-import com.LoyaltyEngine.WalletService.models.domain.enums.WalletStatus;
+import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.Money;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionRepository;
+import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
+import com.LoyaltyEngine.WalletService.models.events.TransactionHandledEvent;
+import com.LoyaltyEngine.WalletService.services.interfaces.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.uuid.UuidCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -31,6 +35,14 @@ public class WalletService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
+
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper mapper;
+
+    @Value("${kafka.topics.transaction-handled}")
+    private String transactionHandled;
+    @Value("${kafka.topics.points-failed}")
+    private String pointsFailed;
 
     public void createWallet(UUID userId) {
         try {
@@ -48,9 +60,15 @@ public class WalletService {
     }
 
     @Transactional
-    public void creditPoints(UUID userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) {
+    public void creditPoints(UUID userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) throws JsonProcessingException {
         try {
             WalletDomain wallet = findWalletByUserId(userId);
+            Optional<WalletTransaction> walletTransactionByTransactionId = walletTransactionRepository.findWalletTransactionByTransactionId(transactionId);
+
+            if (walletTransactionByTransactionId.isPresent()) {
+                log.warn("Transaction is already processed {}", transactionId);
+                return;
+            }
 
             if (wallet.getStatus() == WalletStatus.BLOCKED) {
                 throw new WalletBlockedException(String.format("Wallet %s is blocked.", wallet.getId()));
@@ -58,6 +76,10 @@ public class WalletService {
 
             Money balance = wallet.getBalance();
             if (useCashback && balance.isGreaterThan(Money.zeroOf())) {
+                if (amountOfTransaction.compareTo(totalItemPrice) > 0) {
+                    throw new IllegalArgumentException("Amount of transaction cant be greater than total item price");
+                }
+
                 Money cashbackToUse = new Money(totalItemPrice.subtract(amountOfTransaction));
 
                 if (balance.isLessThan(cashbackToUse)) {
@@ -75,6 +97,7 @@ public class WalletService {
                         redeemTimeStamp,
                         "Redeem cashback"
                 );
+
                 walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
                 walletRepository.save(walletMapper.domainToEntity(wallet));
             } else if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
@@ -98,11 +121,100 @@ public class WalletService {
                 walletRepository.save(walletMapper.domainToEntity(wallet));
                 log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amountOfTransaction);
             }
-        } catch (InsufficientFundsException | WalletBlockedException | WalletNotFoundException e) {
-            throw e;
+
+            TransactionHandledEvent transactionHandledEvent = new TransactionHandledEvent(transactionId, userId);
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(transactionHandled)
+                    .payload(mapper.writeValueAsString(transactionHandledEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
+        } catch (IllegalArgumentException | WalletNotFoundException e) {
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    "Wallet for %s not found".formatted(userId),
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(pointsFailed)
+                    .payload(mapper.writeValueAsString(pointsFailedEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
+        } catch (WalletBlockedException e) {
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    "Wallet is blocked",
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(pointsFailed)
+                    .payload(mapper.writeValueAsString(pointsFailedEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
+        } catch (InsufficientFundsException e) {
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    "Insufficient funds",
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(pointsFailed)
+                    .payload(mapper.writeValueAsString(pointsFailedEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
         } catch (Exception e) {
             log.error("Error crediting points to user {}: {}", userId, e.getMessage());
-            throw new RuntimeException(e);
+            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    "Unknown error",
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(transactionId)
+                    .eventType(pointsFailed)
+                    .payload(mapper.writeValueAsString(pointsFailedEvent))
+                    .retryCount(0)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .build();
+
+            outboxEventRepository.save(event);
         }
     }
 

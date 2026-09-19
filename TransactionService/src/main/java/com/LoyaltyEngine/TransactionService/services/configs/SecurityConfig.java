@@ -4,8 +4,6 @@ import com.LoyaltyEngine.TransactionService.services.security.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -17,9 +15,9 @@ import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.List;
 
-@Configuration
-@EnableWebSecurity
 @EnableMethodSecurity
+@EnableWebSecurity
+@Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
@@ -35,19 +33,9 @@ public class SecurityConfig {
                     corsConfiguration.setAllowCredentials(false);
                     return corsConfiguration;
                 }))
-                .authorizeHttpRequests(request -> {
-                    request.requestMatchers("/api/v1/transactions").authenticated();
-                    request.requestMatchers("/api/v1/transactions/**").authenticated();
-                    request.requestMatchers("/api/v1/transactions/user/").authenticated();
-                    request.anyRequest().permitAll();
-                })
-                .sessionManagement(manage -> manage.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(request -> request.anyRequest().permitAll())
+                .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
-        return configuration.getAuthenticationManager();
     }
 }

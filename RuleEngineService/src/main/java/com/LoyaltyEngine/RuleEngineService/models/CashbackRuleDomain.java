@@ -45,7 +45,7 @@ public class CashbackRuleDomain {
         }
 
         this.id = id;
-        this.category = category;
+        this.category = category.toLowerCase().trim();
         this.percentage = percentage;
         this.validFrom = validFrom;
         this.validTo = validTo;

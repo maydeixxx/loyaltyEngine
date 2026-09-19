@@ -32,7 +32,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TransactionRepositoryException.class)
     public ResponseEntity<?> transactionRepositoryHandler(TransactionRepositoryException ex, WebRequest request) {
-        log.error("Error 500: ", ex);
         ErrorResponseDTO errorResponseDTO = buildResponse("Error in repository", new HashMap<>(), ex.getMessage(), 500, request);
         return ResponseEntity.status(500).body(errorResponseDTO);
     }
@@ -50,8 +49,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> globalExceptionHandler(Exception ex, WebRequest request) {
-        log.error("Error 500: ", ex);
-        ErrorResponseDTO errorResponseDTO = buildResponse("Global Error", new HashMap<>(), "Error on server", 500, request);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Global Error", new HashMap<>(), ex.getMessage(), 500, request);
         return ResponseEntity.status(500).body(errorResponseDTO);
     }
 

@@ -1,7 +1,7 @@
 package com.LoyaltyEngine.WalletService.models.domain;
 
 import com.LoyaltyEngine.WalletService.exceptions.InvalidArgumentException;
-import com.LoyaltyEngine.WalletService.models.domain.enums.TransactionType;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.TransactionId;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.WalletId;

@@ -3,6 +3,7 @@ package com.LoyaltyEngine.WalletService.services.configs;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,22 +61,22 @@ public class KafkaListenerConfig {
     }
 
     @Bean
-    public ConsumerFactory<UUID, UUID> userCreatedConsumerFactory() {
+    public ConsumerFactory<UUID, String> userCreatedConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new UUIDDeserializer()
+                new StringDeserializer()
         );
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<UUID, UUID> userCreatedKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<UUID, UUID> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
+    public ConcurrentKafkaListenerContainerFactory<UUID, String> userCreatedKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, String> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
         containerFactory.setCommonErrorHandler(errorHandler());
         containerFactory.setConsumerFactory(userCreatedConsumerFactory());
 

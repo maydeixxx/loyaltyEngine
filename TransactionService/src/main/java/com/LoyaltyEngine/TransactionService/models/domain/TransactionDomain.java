@@ -6,6 +6,7 @@ import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.Transacti
 import com.LoyaltyEngine.TransactionService.models.domain.valueObjects.UserId;
 import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Getter
 public class TransactionDomain {
     private final TransactionId id;
@@ -79,10 +81,24 @@ public class TransactionDomain {
     }
 
     public void rejectTransaction() {
+        if (this.status.equals(Status.REJECTED)) {
+            log.warn("Status already rejected for transaction: {}", this.id.value());
+            return;
+        }
+        if (!this.status.equals(Status.NEW)) {
+            throw new IllegalArgumentException("Can change status only from new");
+        }
         this.status = Status.REJECTED;
     }
 
     public void completeTransaction() {
+        if (this.status.equals(Status.PROCESSED)) {
+            log.warn("Status already processed for transaction: {}", this.id.value());
+            return;
+        }
+        if (!this.status.equals(Status.NEW)) {
+            throw new IllegalArgumentException("Can change status only from new");
+        }
         this.status = Status.PROCESSED;
     }
 

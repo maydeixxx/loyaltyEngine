@@ -27,8 +27,8 @@ public class JwtService {
 
     public String generateJwtToken(User user) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", "ROLE_" + user.getRole());
-        claims.put("userId", user.getId());
+        claims.put("Role", "ROLE_" + user.getRole());
+        claims.put("User_id", user.getId());
 
         Date issuedAt = new Date();
         Date expireTime = new Date(issuedAt.getTime() + lifetime.toMillis());
@@ -48,11 +48,6 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    public String getRoleFromToken(String  token) {
-        Claims claimsFromToken = getClaimsFromToken(token);
-        return claimsFromToken.get("role").toString();
     }
 
     public String getEmailFromToken(String token) {

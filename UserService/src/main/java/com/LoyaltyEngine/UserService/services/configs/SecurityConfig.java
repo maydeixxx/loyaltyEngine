@@ -17,9 +17,9 @@ import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.List;
 
-@Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
@@ -35,11 +35,7 @@ public class SecurityConfig {
                     corsConfiguration.setAllowCredentials(false);
                     return corsConfiguration;
                 }))
-                .authorizeHttpRequests(request -> {
-                    request.requestMatchers("/api/v1/users/register").permitAll();
-                    request.requestMatchers("/api/v1/users/auth").permitAll();
-                    request.anyRequest().authenticated();
-                })
+                .authorizeHttpRequests(request -> request.anyRequest().permitAll())
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

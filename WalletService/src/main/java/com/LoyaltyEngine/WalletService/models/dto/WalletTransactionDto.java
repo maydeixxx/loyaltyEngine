@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.WalletService.models.dto;
 
-import com.LoyaltyEngine.WalletService.models.domain.enums.TransactionType;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
