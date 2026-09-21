@@ -1,0 +1,237 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Фронтенд
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: loyalty-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway-service
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Spring Cloud Eureka (Service Discovery)
+  # ==========================================
+  eureka-server:
+    build:
+      context: ./EurekaServer
+      dockerfile: Dockerfile
+    container_name: loyalty-eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_INSTANCE_HOSTNAME=eureka-server
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Spring Cloud API Gateway
+  # ==========================================
+  gateway-service:
+    build:
+      context: ./GatewayService
+      dockerfile: Dockerfile
+    container_name: loyalty-gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+    depends_on:
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # User Service
+  # ==========================================
+  user-service:
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+    container_name: loyalty-user-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-user:5432/users_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+    depends_on:
+      - postgres-user
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Wallet Service
+  # ==========================================
+  wallet-service:
+    build:
+      context: ./WalletService
+      dockerfile: Dockerfile
+    container_name: loyalty-wallet-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-wallet:5432/wallet_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+    depends_on:
+      - postgres-wallet
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Transaction Service
+  # ==========================================
+  transaction-service:
+    build:
+      context: ./TransactionService
+      dockerfile: Dockerfile
+    container_name: loyalty-transaction-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-transaction:5432/loyalty_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+    depends_on:
+      - postgres-transaction
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Rule Engine Service
+  # ==========================================
+  rule-engine-service:
+    build:
+      context: ./RuleEngineService
+      dockerfile: Dockerfile
+    container_name: loyalty-rule-engine-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-ruleEngine:5432/ruleEngine_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATA_REDIS_HOST=redis
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+    depends_on:
+      - postgres-ruleEngine
+      - redis
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Базы данных, кафка
+  # ==========================================
+  postgres-transaction:
+    image: postgres:15-alpine
+    container_name: loyalty-postgres-transaction
+    environment:
+      POSTGRES_DB: loyalty_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_transaction_data:/var/lib/postgresql/data
+    networks:
+      - loyalty-network
+
+  postgres-ruleEngine:
+    image: postgres:15-alpine
+    container_name: loyalty-postgres-ruleEngine
+    environment:
+      POSTGRES_DB: ruleEngine_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_ruleEngine_data:/var/lib/postgresql/data
+    networks:
+      - loyalty-network
+
+  postgres-wallet:
+    image: postgres:15-alpine
+    container_name: loyalty-postgres-wallet
+    environment:
+      POSTGRES_DB: wallet_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_wallet_data:/var/lib/postgresql/data
+    networks:
+      - loyalty-network
+
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: loyalty-postgres-user
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - loyalty-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: loyalty-redis
+    networks:
+      - loyalty-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: loyalty-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - loyalty-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: loyalty-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - loyalty-network
+
+volumes:
+  postgres_transaction_data:
+  postgres_ruleEngine_data:
+  postgres_wallet_data:
+  postgres_user_data:
+
+networks:
+  loyalty-network:
+    driver: bridge
