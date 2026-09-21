@@ -3,7 +3,7 @@
 **Высоконагруженная Event-Driven микросервисная система лояльности и начисления кэшбэка с адаптивным веб-интерфейсом**
 
 [![Java](https://img.shields.io/badge/Java-21%2B-ED8B00?logo=openjdk)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.x-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
 [![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2025.x-6DB33F?logo=spring)](https://spring.io/projects/spring-cloud)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
