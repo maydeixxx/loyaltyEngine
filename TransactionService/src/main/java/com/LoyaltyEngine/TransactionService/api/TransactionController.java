@@ -24,14 +24,15 @@ public class TransactionController {
     private final TransactionMapper transactionMapper;
 
     @PostMapping()
-    @PreAuthorize("authentication.principal.userId == #transaction.userId()")
+    @PreAuthorize("authentication.principal.userId == #userId()")
     public ResponseEntity<TransactionDTO> createTransaction(
             @RequestHeader(value = "X-IDEMPOTENCY-KEY") UUID idempotencyKey,
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestBody @Valid CreateTransaction transaction
     ) {
         log.info(
                 "Creating transaction for user: {}, amount: {}, items: {}",
-                transaction.userId(), transaction.amount(), transaction.items()
+                userId, transaction.amount(), transaction.items()
         );
 
         List<TransactionItemDomain> domainItems = transaction.items().stream()
@@ -39,7 +40,7 @@ public class TransactionController {
                 .toList();
         TransactionDTO savedTransaction = transactionMapper.transactionDomainToDTO(
                 transactionService.createTransaction(
-                        transaction.userId(), transaction.amount(), domainItems, idempotencyKey, transaction.useCashbackBalance()
+                        userId, transaction.amount(), domainItems, idempotencyKey, transaction.useCashbackBalance()
                 )
         );
         log.info("Transaction created successfully with id: {}", savedTransaction.id());
