@@ -16,8 +16,10 @@ import java.util.UUID;
 @NoArgsConstructor
 public class TransactionCreatedEvent {
     private UUID transactionId;
-    private Long userId;
+    private UUID userId;
     private BigDecimal amount;
+    private String currency;
     private List<TransactionItemEvent> items;
     private LocalDateTime createdAt;
+    private Boolean useCashbackBalance;
 }

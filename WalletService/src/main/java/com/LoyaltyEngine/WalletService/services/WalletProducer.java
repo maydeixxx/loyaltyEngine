@@ -40,11 +40,11 @@ public class WalletProducer {
                 );
     }
 
-    public void sendHandledTransaction(UUID transactionId, Long userId) {
-        TransactionHandledEvent event = TransactionHandledEvent.builder()
-                .transactionId(transactionId)
-                .userId(userId)
-                .build();
+    public void sendHandledTransaction(UUID transactionId, UUID userId) {
+        TransactionHandledEvent event = new TransactionHandledEvent(
+                transactionId,
+                userId
+        );
 
         transactionHandledEventKafkaTemplate.send("transaction_handled", transactionId, event).whenComplete(
                 (_, ex) -> {

@@ -4,24 +4,104 @@ import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.dto.CreateTransactionItem;
 import com.LoyaltyEngine.TransactionService.models.dto.TransactionDTO;
+import com.LoyaltyEngine.TransactionService.models.dto.TransactionItemDTO;
 import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
 import com.LoyaltyEngine.TransactionService.models.entity.TransactionItem;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Currency;
+import java.util.List;
 
 
-@Mapper(componentModel = "spring")
-public interface TransactionMapper {
-    @Mapping(target = "transactionItems", source = "items")
-    Transaction transactionDomainToEntity(TransactionDomain domain);
+@Component
+public class TransactionMapper {
 
-    @Mapping(target = "items", source = "transactionItems")
-    TransactionDomain transactionEntityToDomain(Transaction entity);
+    public Transaction transactionDomainToEntity(TransactionDomain domain) {
+        Transaction transaction = new Transaction();
+        transaction.setAmount(domain.getAmount().amount());
+        transaction.setCreatedAt(domain.getCreatedAt());
+        transaction.setId(domain.getId().value());
+        transaction.setIdempotencyKey(domain.getIdempotencyKey().value());
+        transaction.setStatus(domain.getStatus());
 
-    TransactionDTO transactionDomainToDTO(TransactionDomain transactionDomain);
+        transaction.setUserId(domain.getUserId().value());
+        for (TransactionItemDomain item : domain.getItems()) {
+            TransactionItem transactionItem = transactionItemDomainToEntity(item, transaction);
+            transaction.addItem(transactionItem);
+        }
 
-    @Mapping(target = "transaction", ignore = true)
-    TransactionItem transactionItemDomainToEntity(TransactionItemDomain item);
-    @Mapping(target = "id", ignore = true)
-    TransactionItemDomain createTransactionItemDtoToDomain(CreateTransactionItem item);
+        return transaction;
+    }
+
+    public TransactionDomain transactionEntityToDomain(Transaction entity) {
+        List<TransactionItemDomain> items = new ArrayList<>();
+        for (TransactionItem item : entity.getTransactionItems()) {
+            items.add(transactionItemEntityToDomain(item));
+        }
+
+        return TransactionDomain.restoreFromExisting(
+                entity.getId(),
+                entity.getUserId(),
+                entity.getIdempotencyKey(),
+                entity.getAmount(),
+                items,
+                entity.getCreatedAt(),
+                entity.getStatus(),
+                entity.getUseCashbackBalance()
+        );
+    }
+
+    public TransactionDTO transactionDomainToDTO(TransactionDomain transactionDomain) {
+        List<TransactionItemDTO> items = new ArrayList<>();
+        for (TransactionItemDomain item : transactionDomain.getItems()) {
+            items.add(transactionItemDomainToDTO(item));
+        }
+
+        return new TransactionDTO(
+                transactionDomain.getId().value(),
+                transactionDomain.getUserId().value(),
+                transactionDomain.getIdempotencyKey().value(),
+                transactionDomain.getAmount().amount(),
+                items,
+                transactionDomain.getCreatedAt(),
+                transactionDomain.getStatus()
+        );
+    }
+
+    public TransactionItemDTO transactionItemDomainToDTO(TransactionItemDomain item) {
+        return new TransactionItemDTO(
+                item.getCategory(),
+                item.getName(),
+                item.getPrice().amount()
+        );
+    }
+
+    public TransactionItem transactionItemDomainToEntity(TransactionItemDomain item, Transaction parent) {
+        TransactionItem transactionItem = new TransactionItem();
+        transactionItem.setPrice(item.getPrice().amount());
+        transactionItem.setName(item.getName());
+        transactionItem.setCategory(item.getCategory());
+        transactionItem.setId(item.getId().value());
+        transactionItem.setTransaction(parent);
+
+        return transactionItem;
+    }
+
+    public TransactionItemDomain transactionItemEntityToDomain(TransactionItem transactionItem) {
+        return TransactionItemDomain.restoreFromExisting(
+                transactionItem.getId(),
+                transactionItem.getCategory(),
+                transactionItem.getName(),
+                transactionItem.getPrice()
+        );
+    }
+
+    public TransactionItemDomain transactionItemDtoToDomain(CreateTransactionItem item) {
+        return TransactionItemDomain.createTransactionItem(
+                item.category(),
+                item.name(),
+                item.price()
+        );
+    }
 }

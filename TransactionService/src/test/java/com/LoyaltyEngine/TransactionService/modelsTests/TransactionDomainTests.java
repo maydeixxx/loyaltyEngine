@@ -8,28 +8,31 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
 public class TransactionDomainTests {
 
+    private static final Currency currency = Currency.getInstance("USD");
+
     @Test
     @DisplayName("Создание TransactionDomain с валидными данными")
     void createTransactionDomain_WithValidData() {
         //given
-        Long userId = Long.parseLong("1");
-        BigDecimal amount = new BigDecimal("100.1");
+        UUID userId = UUID.randomUUID();
+        BigDecimal amount = new BigDecimal("101.00");
         UUID idempotencyKey = UUID.randomUUID();
         List<TransactionItemDomain> items = List.of(
-                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101"))
+                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101.00"))
         );
 
         //when
-        TransactionDomain transactionDomain = TransactionDomain.create(userId, idempotencyKey, amount, items);
+        TransactionDomain transactionDomain = TransactionDomain.create(userId, idempotencyKey, amount, items, false);
 
         //then
-        Assertions.assertEquals(userId, transactionDomain.getUserId());
-        Assertions.assertEquals(amount, transactionDomain.getAmount());
+        Assertions.assertEquals(userId, transactionDomain.getUserId().value());
+        Assertions.assertEquals(new BigDecimal("101.00"), transactionDomain.getAmount().amount());
         Assertions.assertEquals(items, transactionDomain.getItems());
     }
 
@@ -37,84 +40,70 @@ public class TransactionDomainTests {
     @DisplayName("Создание TransactionDomain с null userId")
     void createTransactionDomain_WithNullUserId() {
         //given
-        BigDecimal amount = new BigDecimal("100.1");
+        BigDecimal amount = new BigDecimal("101.00");
         UUID idempotencyKey = UUID.randomUUID();
         List<TransactionItemDomain> items = List.of(
-                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101"))
-                );
-
-        //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(null, idempotencyKey, amount, items));
-
-        //then
-        Assertions.assertEquals("UserId не может быть null", ex.getMessage());
-    }
-
-    @Test
-    @DisplayName("Создание TransactionDomain с -1 userId")
-    void createTransactionDomain_WithNegativeUserId() {
-        //given
-        BigDecimal amount = new BigDecimal("100.1");
-        UUID idempotencyKey = UUID.randomUUID();
-        List<TransactionItemDomain> items = List.of(
-                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101"))
+                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101.00"))
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create((long) -1, idempotencyKey, amount, items));
+        NullPointerException ex = Assertions.assertThrows(NullPointerException.class, () ->
+                TransactionDomain.create(null, idempotencyKey, amount, items, false));
 
         //then
-        Assertions.assertEquals("UserId не может быть меньше 1", ex.getMessage());
+        Assertions.assertEquals("User id cant be null", ex.getMessage());
     }
 
     @Test
     @DisplayName("Создание TransactionDomain с null amount")
     void createTransactionDomain_WithNullAmount() {
         //given
+        UUID userId = UUID.randomUUID();
         UUID idempotencyKey = UUID.randomUUID();
         List<TransactionItemDomain> items = List.of(
-                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101"))
+                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101.00"))
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, idempotencyKey, null, items));
+        NullPointerException ex = Assertions.assertThrows(NullPointerException.class, () ->
+                TransactionDomain.create(userId, idempotencyKey, null, items, false));
 
         //then
-        Assertions.assertEquals("Amount не может быть меньше 0 или равной 0", ex.getMessage());
+        Assertions.assertEquals("Amount cant be null", ex.getMessage());
     }
 
     @Test
     @DisplayName("Создание TransactionDomain с null idempotencyKey")
     void createTransactionDomain_WithNullIdempotencyKey() {
         //given
-        BigDecimal amount = new BigDecimal("100.1");
-        UUID idempotencyKey = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        BigDecimal amount = new BigDecimal("101.00");
         List<TransactionItemDomain> items = List.of(
-                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101"))
+                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101.00"))
         );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, null, amount, items));
+        NullPointerException ex = Assertions.assertThrows(NullPointerException.class, () ->
+                TransactionDomain.create(userId, null, amount, items, false));
 
         //then
-        Assertions.assertEquals("Idempotency key не может быть null", ex.getMessage());
+        Assertions.assertEquals("Idempotency key cant be null", ex.getMessage());
     }
 
     @Test
     @DisplayName("Создание TransactionDomain с empty items")
     void createTransactionDomain_WithEmptyItems() {
         //given
+        UUID userId = UUID.randomUUID();
         BigDecimal amount = new BigDecimal("100.1");
         UUID idempotencyKey = UUID.randomUUID();
-        List<TransactionItemDomain> items = List.of(
-                TransactionItemDomain.createTransactionItem("el", "lap", new BigDecimal("101"))
-        );
 
         //when && then
-        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionDomain.create(1L, idempotencyKey, amount, new ArrayList<>()));
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () ->
+                TransactionDomain.create(userId, idempotencyKey, amount, new ArrayList<>(), false));
 
         //then
-        Assertions.assertEquals("Items не может быть пустым", ex.getMessage());
+        Assertions.assertEquals("Items size must be >= 1", ex.getMessage());
     }
 
 }

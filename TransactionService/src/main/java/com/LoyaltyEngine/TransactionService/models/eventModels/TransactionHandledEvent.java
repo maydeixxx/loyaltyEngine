@@ -11,5 +11,5 @@ import java.util.UUID;
 @Data
 public class TransactionHandledEvent {
     private UUID transactionId;
-    private Long userId;
+    private UUID userId;
 }

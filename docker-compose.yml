@@ -38,7 +38,21 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
     volumes:
-      - postgres_wallet_data:/var/li
+      - postgres_wallet_data:/var/lib/postgresql/data
+    networks:
+      - loyalty-network
+
+  postgres-user:
+    image: postgres:15
+    container_name: loyalty-postgres-user
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
     networks:
       - loyalty-network
 
@@ -86,6 +100,7 @@ volumes:
   postgres_transaction_data:
   postgres_ruleEngine_data:
   postgres_wallet_data:
+  postgres_user_data:
 
 networks:
   loyalty-network:

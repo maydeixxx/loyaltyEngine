@@ -6,8 +6,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 public class TransactionItemTests {
+
+    private static final Currency currency = Currency.getInstance("USD");
 
     @Test
     @DisplayName("Успешное создание TransactionItemDomain с валидными данным")
@@ -23,7 +26,7 @@ public class TransactionItemTests {
         //then
         Assertions.assertEquals(category, transactionItem.getCategory());
         Assertions.assertEquals(name, transactionItem.getName());
-        Assertions.assertEquals(price, transactionItem.getPrice());
+        Assertions.assertEquals(new BigDecimal("102.20"), transactionItem.getPrice().amount());
     }
 
     @Test
@@ -65,7 +68,7 @@ public class TransactionItemTests {
         //when && then
         IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> TransactionItemDomain.createTransactionItem(category, name, price));
 
-        Assertions.assertEquals("Price не может быть <= 0 или null", ex.getMessage());
+        Assertions.assertEquals("Amount cant be negative", ex.getMessage());
     }
 
 }

@@ -1,17 +1,18 @@
 package com.LoyaltyEngine.WalletService.api;
 
+import com.LoyaltyEngine.WalletService.models.dto.CreateWalletDTO;
 import com.LoyaltyEngine.WalletService.models.dto.WalletTransactionDto;
 import com.LoyaltyEngine.WalletService.services.WalletService;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletTransactionMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/wallets")
@@ -20,18 +21,43 @@ public class WalletController {
     private final WalletService walletService;
     private final WalletTransactionMapper walletTransactionMapper;
 
+    @PostMapping()
+    @PreAuthorize("authentication.principal.userId == #walletDTO.userId() or hasRole('ADMIN')")
+    public ResponseEntity<Void> createWallet(@RequestBody @Valid CreateWalletDTO walletDTO) {
+        UUID userId = walletDTO.userId();
+
+        walletService.createWallet(userId);
+        return ResponseEntity.status(201).build();
+    }
+
     @GetMapping("/{userId}/balance")
-    public ResponseEntity<BigDecimal> getWalletBalance(@PathVariable Long userId) {
+    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
+    public ResponseEntity<BigDecimal> getWalletBalance(@PathVariable UUID userId) {
         return ResponseEntity.ok().body(walletService.getBalance(userId));
     }
 
     @GetMapping("/{userId}/history")
-    public ResponseEntity<List<WalletTransactionDto>> getWalletHistory(@PathVariable Long userId) {
+    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
+    public ResponseEntity<List<WalletTransactionDto>> getWalletHistory(@PathVariable UUID userId) {
         List<WalletTransactionDto> walletTransactions = walletService.getTransactionsHistory(userId)
                 .stream()
                 .map(walletTransactionMapper::domainToDto)
                 .toList();
 
         return ResponseEntity.ok().body(walletTransactions);
+    }
+
+    @PutMapping("/{userId}/block")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> blockWallet(@PathVariable UUID userId) {
+        walletService.blockWallet(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{userId}/unblock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> unblockWallet(@PathVariable UUID userId) {
+        walletService.unblockWallet(userId);
+        return ResponseEntity.ok().build();
     }
 }

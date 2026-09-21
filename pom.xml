@@ -6,7 +6,6 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.0.6</version>
-		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.LoyaltyEngine</groupId>
 	<artifactId>LoyaltyEngine</artifactId>
@@ -14,8 +13,11 @@
 	<packaging>pom</packaging>
 	<modules>
 		<module>RuleEngineService</module>
-		<module>transactionService</module>
-		<module>walletService</module>
+		<module>TransactionService</module>
+		<module>WalletService</module>
+		<module>EurekaServer</module>
+		<module>UserService</module>
+		<module>GatewayService</module>
 	</modules>
 	<name/>
 	<description/>
@@ -34,11 +36,31 @@
 	</scm>
 	<properties>
 		<java.version>23</java.version>
+		<spring-cloud.version>2025.1.2</spring-cloud.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.github.f4b6a3</groupId>
+			<artifactId>uuid-creator</artifactId>
+			<version>5.3.7</version>
 		</dependency>
 
 		<dependency>

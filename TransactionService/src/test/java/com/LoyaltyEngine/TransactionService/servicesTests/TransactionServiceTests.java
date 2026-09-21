@@ -4,6 +4,7 @@ import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundExcept
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
+import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -23,6 +25,9 @@ import java.util.UUID;
 @SpringBootTest
 @Testcontainers
 @Transactional
+@TestPropertySource(properties = {
+        "eureka.client.enabled=false"
+})
 public class TransactionServiceTests {
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18.3");
@@ -45,39 +50,43 @@ public class TransactionServiceTests {
     @DisplayName("Успешное создание транзакции")
     void createTransactionSuccess() {
         //given
+        UUID userId = UuidCreator.getTimeOrderedEpoch();
         BigDecimal amount = new BigDecimal("102.2");
         UUID idempotencyKey = UUID.randomUUID();
 
         //when
-        TransactionDomain transaction = transactionService.createTransaction(1L, amount, items, idempotencyKey);
+        TransactionDomain transaction = transactionService.createTransaction(userId, amount, items, idempotencyKey, false);
 
         //then
-        Assertions.assertEquals(1, transaction.getUserId());
-        Assertions.assertEquals(amount, transaction.getAmount());
-        Assertions.assertEquals(idempotencyKey, transaction.getIdempotencyKey());
+        Assertions.assertEquals(userId, transaction.getUserId().value());
+        Assertions.assertEquals(new BigDecimal("102.20"), transaction.getAmount().amount());
+        Assertions.assertEquals(idempotencyKey, transaction.getIdempotencyKey().value());
     }
 
     @Test
     @DisplayName("Создание транзакции с уже существующим IK")
     void createTransactionIKPresent() {
         //given
+        UUID userId1 = UuidCreator.getTimeOrderedEpoch();
+        UUID userId2 = UuidCreator.getTimeOrderedEpoch();
         UUID idempotencyKey = UUID.randomUUID();
-        transactionService.createTransaction(1L, new BigDecimal("102.2"), items, idempotencyKey);
+        transactionService.createTransaction(userId1, new BigDecimal("102.2"), items, idempotencyKey, false);
 
         //when
-        TransactionDomain secondTransaction = transactionService.createTransaction(2L, new BigDecimal("103.2"), items, idempotencyKey);
+        TransactionDomain secondTransaction = transactionService.createTransaction(userId2, new BigDecimal("103.2"), items, idempotencyKey, false);
 
         //then
-        Assertions.assertEquals(1L, secondTransaction.getUserId());
-        Assertions.assertEquals(new BigDecimal("102.2"), secondTransaction.getAmount());
+        Assertions.assertEquals(userId1, secondTransaction.getUserId().value());
+        Assertions.assertEquals(new BigDecimal("102.20"), secondTransaction.getAmount().amount());
     }
 
     @Test
     @DisplayName("Успешный поиск транзакции по id")
     void findTransactionByIdSuccess() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID());
-        UUID id = transaction.getId();
+        UUID userId = UuidCreator.getTimeOrderedEpoch();
+        TransactionDomain transaction = transactionService.createTransaction(userId, new BigDecimal("102.2"), items, UUID.randomUUID(), false);
+        UUID id = transaction.getId().value();
 
         //when
         TransactionDomain transactionById = transactionService.getTransactionById(id);
@@ -103,10 +112,11 @@ public class TransactionServiceTests {
     @DisplayName("Поиск транзакции по userId")
     void findTransactionByUserId() {
         //given
-        TransactionDomain transaction = transactionService.createTransaction(1L, new BigDecimal("105.1"), items, UUID.randomUUID());
+        UUID userid = UuidCreator.getTimeOrderedEpoch();
+        TransactionDomain transaction = transactionService.createTransaction(userid, new BigDecimal("102.2"), items, UUID.randomUUID(), false);
 
         //when
-        TransactionDomain transactionByUserId = transactionService.getTransactionByUserId(1L).getFirst();
+        TransactionDomain transactionByUserId = transactionService.getTransactionByUserId(userid).getFirst();
 
         //then
         Assertions.assertEquals(transaction.getAmount(), transactionByUserId.getAmount());
