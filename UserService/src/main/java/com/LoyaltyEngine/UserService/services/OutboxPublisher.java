@@ -36,6 +36,7 @@ public class OutboxPublisher {
                 try {
                     kafkaTemplate.send(event.getEventType(), event.getAggregateId(), event.getPayload()).get(10, TimeUnit.SECONDS);
                     event.setStatus(OutboxStatus.SENT);
+                    log.info("Sent nes message in {}", event.getEventType());
                     outboxEventRepository.save(event);
                 } catch (Exception e) {
                     int retryCount = event.getRetryCount();

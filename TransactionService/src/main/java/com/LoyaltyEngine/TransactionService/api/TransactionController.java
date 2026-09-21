@@ -24,7 +24,7 @@ public class TransactionController {
     private final TransactionMapper transactionMapper;
 
     @PostMapping()
-    @PreAuthorize("authentication.principal.userId == #userId()")
+    @PreAuthorize("authentication.principal.userId == #userId")
     public ResponseEntity<TransactionDTO> createTransaction(
             @RequestHeader(value = "X-IDEMPOTENCY-KEY") UUID idempotencyKey,
             @RequestHeader("X-User-Id") UUID userId,
