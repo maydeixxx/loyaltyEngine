@@ -10,9 +10,6 @@ import java.util.List;
 import java.util.UUID;
 
 public record CreateTransaction(
-        @NotNull(message = "User id cant be null")
-        UUID userId,
-
         @NotNull(message = "Amount of the trans. cant be null")
         @DecimalMin(value = "0.01", message = "Amount of the trans. must be > 0.01")
         BigDecimal amount,
