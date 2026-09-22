@@ -27,33 +27,44 @@ public class RuleEngineConsumer {
             containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
     )
     public void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEvent> record) {
-        TransactionCreatedEvent model = record.value();
+        try {
+            TransactionCreatedEvent model = record.value();
 
-        UUID transactionId = record.key();
-        UUID userId = model.userId();
-        BigDecimal amountOfTransaction = model.amount();
-        BigDecimal cashback = BigDecimal.ZERO;
-        BigDecimal totalItemPrice = BigDecimal.ZERO;
+            UUID transactionId = record.key();
+            UUID userId = model.userId();
+            BigDecimal amountOfTransaction = model.amount();
+            BigDecimal cashback = BigDecimal.ZERO;
+            BigDecimal totalItemPrice = BigDecimal.ZERO;
 
-        for (TransactionItemEvent item : model.items()) {
-            BigDecimal itemPrice = item.price();
-            BigDecimal percentageForCategory = ruleEngineService.getPercentageForCategory(item.category());
+            for (TransactionItemEvent item : model.items()) {
+                BigDecimal itemPrice = item.price();
+                String category = item.category();
 
-            totalItemPrice = totalItemPrice.add(itemPrice);
-            cashback = cashback.add(itemPrice.multiply(percentageForCategory).divide(hundred, 2, RoundingMode.HALF_EVEN));
+                BigDecimal percentageForCategory = new BigDecimal("1.00");
+                if (category != null) {
+                    percentageForCategory = ruleEngineService.getPercentageForCategory(category);
+                }
+
+                totalItemPrice = totalItemPrice.add(itemPrice);
+                cashback = cashback.add(itemPrice.multiply(percentageForCategory).divide(hundred, 2, RoundingMode.HALF_EVEN));
+            }
+
+            CalculatedCashbackEventModel calculatedCashbackModel = new CalculatedCashbackEventModel(
+                    transactionId,
+                    userId,
+                    amountOfTransaction,
+                    totalItemPrice,
+                    cashback,
+                    model.useCashbackBalance()
+            );
+
+            ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);
+            log.info("Total cashback for transaction {} : {}", transactionId, cashback);
+        } catch (Exception e) {
+            log.error("Error handling transaction created event: {}", e.getMessage());
+            throw new RuntimeException(e);
         }
 
-        CalculatedCashbackEventModel calculatedCashbackModel = new CalculatedCashbackEventModel(
-                transactionId,
-                userId,
-                amountOfTransaction,
-                totalItemPrice,
-                cashback,
-                model.useCashbackBalance()
-        );
-
-        ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);
-        log.info("Total cashback for transaction {} : {}", transactionId, cashback);
     }
 
 }

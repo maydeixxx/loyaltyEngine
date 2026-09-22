@@ -23,7 +23,7 @@ public class WalletDomain {
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public WalletDomain(WalletId walletId, UserId userId, Money balance, WalletStatus status, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private WalletDomain(WalletId walletId, UserId userId, Money balance, WalletStatus status, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.userId = userId;
         this.balance = balance;
         this.status = status;

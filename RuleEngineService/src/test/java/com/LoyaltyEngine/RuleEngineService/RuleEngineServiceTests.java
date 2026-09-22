@@ -95,7 +95,7 @@ public class RuleEngineServiceTests {
         LocalDateTime validTo = LocalDateTime.now().plusDays(1);
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
-        UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO("new", null, null, null);
+        UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO("category", "new", null, null);
         UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
 
         //when

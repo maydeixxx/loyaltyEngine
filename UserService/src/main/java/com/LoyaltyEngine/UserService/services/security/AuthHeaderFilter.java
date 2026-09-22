@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Component
 @Slf4j
-public class JwtFilter extends OncePerRequestFilter {
+public class AuthHeaderFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {

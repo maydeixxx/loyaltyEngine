@@ -28,16 +28,24 @@ public class AuthFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
         try {
-            if (HttpMethod.OPTIONS.equals(exchange.getRequest().getMethod())) {
-                return chain.filter(exchange);
+            ServerHttpRequest request = exchange.getRequest();
+            ServerHttpRequest removedHeadersRequest = request.mutate().headers(headers -> {
+                        headers.remove("X-User-Role");
+                        headers.remove("X-User-Id");
+                        headers.remove("X-User-Email");
+                    })
+                    .build();
+
+            if (HttpMethod.OPTIONS.equals(request.getMethod())) {
+                return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
             }
 
-            String path = exchange.getRequest().getURI().getPath();
+            String path = request.getURI().getPath();
 
-            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register"))
-                return chain.filter(exchange);
+            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register")) {
+                return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
+            }
 
-            ServerHttpRequest request = exchange.getRequest();
             String authorizationHeader;
             String jwtToken;
 

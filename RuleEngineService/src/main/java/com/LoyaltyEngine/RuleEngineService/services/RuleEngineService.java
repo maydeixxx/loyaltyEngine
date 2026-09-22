@@ -6,7 +6,9 @@ import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;
 import com.LoyaltyEngine.RuleEngineService.models.dto.UpdateCashbackModelDTO;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.RuleEngineMapper;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.RuleEngineRepository;
+import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RuleEngineService {
@@ -34,8 +37,17 @@ public class RuleEngineService {
 
     @CacheEvict(value = "cashback_rules", allEntries = true)
     public void createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
-        CashbackRuleDomain cashbackRule = CashbackRuleDomain.createCashbackRule(category, percentage, validFrom, validTo);
-        ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRule));
+        try {
+            if (ruleEngineRepository.findByCategory(category).isPresent()) throw new EntityExistsException("Rule for category [%s] exists".formatted(category));
+            CashbackRuleDomain cashbackRule = CashbackRuleDomain.createCashbackRule(category, percentage, validFrom, validTo);
+            ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRule));
+        } catch (EntityExistsException e) {
+            log.error(e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Error creating new rule: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     public List<CashbackRuleDomain> getAllRules() {
@@ -45,17 +57,25 @@ public class RuleEngineService {
     @Transactional
     @CacheEvict(value = "cashback_rules", allEntries = true)
     public void updateCashbackRule(UpdateCashbackModelDTO newValue, UUID id) {
-        CashbackRuleDomain cashbackRuleById = ruleEngineMapper.entityToDomain(ruleEngineRepository.findById(id).orElseThrow(() -> new CashbackRuleNotFoundException("Rule not found: " + id)));
+        try {
+            CashbackRuleDomain cashbackRuleById = ruleEngineMapper.entityToDomain(ruleEngineRepository.findById(id).orElseThrow(() -> new CashbackRuleNotFoundException("Rule not found: " + id)));
 
-        if (newValue.category() != null) {
-            cashbackRuleById.updateCategory(newValue.category().toLowerCase().trim());
+            switch (newValue.fieldToUpdate().toLowerCase().trim()) {
+                case "category" -> cashbackRuleById.updateCategory(newValue.category());
+                case "percentage" -> cashbackRuleById.updatePercentage(newValue.percentage());
+                case "validto" -> cashbackRuleById.updateValidTo(newValue.validTo());
+                default -> log.error("Unknown field to update: {}", newValue.fieldToUpdate());
+            }
+
+            ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRuleById));
+        } catch (CashbackRuleNotFoundException e) {
+            log.error(e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Error updating cashback rule: {}", e.getMessage());
+            throw new RuntimeException(e);
         }
 
-        if (newValue.percentage() != null) {
-            cashbackRuleById.updatePercentage(newValue.percentage());
-        }
-
-        ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRuleById));
     }
 
     @Transactional

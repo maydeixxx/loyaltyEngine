@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.WalletService.services.configs;
 
-import com.LoyaltyEngine.WalletService.services.security.JwtFilter;
+import com.LoyaltyEngine.WalletService.services.security.AuthHeaderFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +20,7 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final JwtFilter jwtFilter;
+    private final AuthHeaderFilter authHeaderFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity security) {
@@ -35,7 +35,7 @@ public class SecurityConfig {
                 }))
                 .authorizeHttpRequests(request -> request.anyRequest().permitAll())
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(authHeaderFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
