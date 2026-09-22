@@ -24,7 +24,7 @@ public class TransactionController {
     private final TransactionMapper transactionMapper;
 
     @PostMapping()
-    @PreAuthorize("authentication.principal.userId == #userId")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #userId")
     public ResponseEntity<TransactionDTO> createTransaction(
             @RequestHeader(value = "X-IDEMPOTENCY-KEY") UUID idempotencyKey,
             @RequestHeader("X-User-Id") UUID userId,
@@ -48,7 +48,7 @@ public class TransactionController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #userId")
     public ResponseEntity<List<TransactionDTO>> getTransactionsByUserId(@PathVariable UUID userId) {
         List<TransactionDTO> transactions = transactionService.getTransactionByUserId(userId).stream().map(transactionMapper::transactionDomainToDTO).toList();
         return ResponseEntity.ok(transactions);

@@ -57,20 +57,21 @@ public class UserController {
     }
 
     @GetMapping()
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserDTO> getSelf(@AuthenticationPrincipal UserSecurity userSecurity) {
         UserDTO user = userMapper.domainToDto(userService.findUserByEmail(userSecurity.email()));
         return ResponseEntity.ok(user);
     }
 
     @DeleteMapping("/{email}")
-    @PreAuthorize("authentication.principal.email == #email or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.email == #email")
     public ResponseEntity<?> deleteUser(@PathVariable String email) {
         userService.deleteUser(email);
         return ResponseEntity.status(204).build();
     }
 
     @PutMapping("/{email}")
-    @PreAuthorize("authentication.principal.email == #email or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.email == #email")
     public ResponseEntity<?> updateUser(@PathVariable String email, @RequestBody @Valid UpdateUserDTO userDTO) {
         userService.updateUser(email, userDTO);
         return ResponseEntity.status(204).build();

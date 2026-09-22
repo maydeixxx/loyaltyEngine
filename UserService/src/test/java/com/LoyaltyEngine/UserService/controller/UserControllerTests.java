@@ -215,7 +215,7 @@ public class UserControllerTests {
     void successfulUpdateUser() throws Exception {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.FIRST_NAME, null, "UpdatedName", null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO("firstname", null, "UpdatedName", null, null, null);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/users/{email}", user.getEmail())
@@ -232,7 +232,7 @@ public class UserControllerTests {
     void unsuccessfulUpdateUserSameEmail() throws Exception {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO(FieldToUpdate.EMAIL, createUserDTO.email(), null, null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO("email", createUserDTO.email(), null, null, null, null);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/users/{email}", user.getEmail())

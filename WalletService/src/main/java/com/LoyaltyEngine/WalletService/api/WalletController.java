@@ -22,7 +22,7 @@ public class WalletController {
     private final WalletTransactionMapper walletTransactionMapper;
 
     @PostMapping()
-    @PreAuthorize("authentication.principal.userId == #walletDTO.userId() or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #walletDTO.userId()")
     public ResponseEntity<Void> createWallet(@RequestBody @Valid CreateWalletDTO walletDTO) {
         UUID userId = walletDTO.userId();
 
@@ -31,13 +31,13 @@ public class WalletController {
     }
 
     @GetMapping("/{userId}/balance")
-    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #userId")
     public ResponseEntity<BigDecimal> getWalletBalance(@PathVariable UUID userId) {
         return ResponseEntity.ok().body(walletService.getBalance(userId));
     }
 
     @GetMapping("/{userId}/history")
-    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #userId")
     public ResponseEntity<List<WalletTransactionDto>> getWalletHistory(@PathVariable UUID userId) {
         List<WalletTransactionDto> walletTransactions = walletService.getTransactionsHistory(userId)
                 .stream()

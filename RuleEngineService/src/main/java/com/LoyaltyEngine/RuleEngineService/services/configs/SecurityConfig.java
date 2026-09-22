@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.RuleEngineService.services.configs;
 
-import com.LoyaltyEngine.RuleEngineService.services.security.JwtFilter;
+import com.LoyaltyEngine.RuleEngineService.services.security.AuthHeaderFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +20,7 @@ import java.util.List;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final JwtFilter jwtFilter;
+    private final AuthHeaderFilter jwtFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity security) {

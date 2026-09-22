@@ -32,12 +32,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(400).body(errorResponse);
     }
 
-    @ExceptionHandler(JwtCheckingException.class)
-    public ResponseEntity<ErrorResponse> jwtCheckingExceptionHandler(JwtCheckingException ex, WebRequest request) {
-        ErrorResponse errorResponse = buildErrorResponse(409, "error checking jwt token", ex.getMessage(), request);
-        return ResponseEntity.status(409).body(errorResponse);
-    }
-
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> userNotFoundExceptionHandler(UserNotFoundException ex, WebRequest request) {
         ErrorResponse errorResponse = buildErrorResponse(404, "failed to find user", ex.getMessage(), request);

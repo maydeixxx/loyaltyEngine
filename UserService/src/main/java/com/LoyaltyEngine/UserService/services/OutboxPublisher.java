@@ -43,7 +43,6 @@ public class OutboxPublisher {
                     log.error("Error sending event [type = {}]", event.getEventType());
                     if (retryCount >= 3) {
                         event.setStatus(OutboxStatus.FAILED);
-                        outboxEventRepository.save(event);
                     }
                     event.setRetryCount(retryCount + 1);
                     outboxEventRepository.save(event);

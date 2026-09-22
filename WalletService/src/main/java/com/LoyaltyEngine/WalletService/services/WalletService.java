@@ -135,6 +135,7 @@ public class WalletService {
 
             outboxEventRepository.save(event);
         } catch (IllegalArgumentException | WalletNotFoundException e) {
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -145,7 +146,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -155,6 +156,7 @@ public class WalletService {
 
             outboxEventRepository.save(event);
         } catch (WalletBlockedException e) {
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -165,7 +167,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -175,6 +177,7 @@ public class WalletService {
 
             outboxEventRepository.save(event);
         } catch (InsufficientFundsException e) {
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -185,7 +188,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -196,6 +199,7 @@ public class WalletService {
             outboxEventRepository.save(event);
         } catch (Exception e) {
             log.error("Error crediting points to user {}: {}", userId, e.getMessage());
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -206,7 +210,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)

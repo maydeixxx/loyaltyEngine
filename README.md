@@ -153,7 +153,7 @@ WalletService (автоматическое создание бонусного 
 
 3. **Запустите контейнеры:**
    ```bash
-   docker compose -f docker-compose.prod.yml up -d --build
+   docker compose -f docker-compose.yml up -d --build
    ```
 
 4. **Готово! Приложение доступно:**

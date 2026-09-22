@@ -25,6 +25,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.LoyaltyEngine.WalletService.models.entity.OutboxEvent;
+import com.LoyaltyEngine.WalletService.services.interfaces.OutboxEventRepository;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +54,9 @@ public class WalletServiceTests {
 
     @Autowired
     private WalletRepository walletRepository;
+
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
 
     @Autowired
     private WalletMapper mapper;
@@ -110,7 +116,7 @@ public class WalletServiceTests {
 
     @Test
     @DisplayName("Недостаточно средств при оплате")
-    void insufficientFunds() {
+    void insufficientFunds() throws Exception {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -121,13 +127,20 @@ public class WalletServiceTests {
         BigDecimal totalItemPrice = new BigDecimal("122.22");
         Boolean useCashback = false;
 
-        //when / then
-        Assertions.assertThrows(InsufficientFundsException.class, () -> walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice), "Insufficient funds");
+        //when
+        walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice);
+
+        //then
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        Assertions.assertFalse(events.isEmpty());
+        OutboxEvent lastEvent = events.get(events.size() - 1);
+        Assertions.assertEquals("points_failed", lastEvent.getEventType());
+        Assertions.assertTrue(lastEvent.getPayload().contains("Insufficient funds"));
     }
 
     @Test
     @DisplayName("Кошелек заблокирован")
-    void walletIsBlocked() {
+    void walletIsBlocked() throws Exception {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -140,13 +153,20 @@ public class WalletServiceTests {
         BigDecimal totalItemPrice = new BigDecimal("122.22");
         Boolean useCashback = false;
 
-        //when / then
-        Assertions.assertThrows(WalletBlockedException.class, () -> walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice), "Wallet %s is blocked".formatted(walletId));
+        //when
+        walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice);
+
+        //then
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        Assertions.assertFalse(events.isEmpty());
+        OutboxEvent lastEvent = events.get(events.size() - 1);
+        Assertions.assertEquals("points_failed", lastEvent.getEventType());
+        Assertions.assertTrue(lastEvent.getPayload().contains("Wallet is blocked"));
     }
 
     @Test
     @DisplayName("Кошелек не найден")
-    void walletNotFound() {
+    void walletNotFound() throws Exception {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         UUID transactionId = UuidCreator.getTimeOrderedEpoch();
@@ -155,8 +175,15 @@ public class WalletServiceTests {
         BigDecimal totalItemPrice = new BigDecimal("122.22");
         Boolean useCashback = false;
 
-        //when / then
-        Assertions.assertThrows(WalletNotFoundException.class, () -> walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice), "Wallet by user id %s not found".formatted(userId));
+        //when
+        walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice);
+
+        //then
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        Assertions.assertFalse(events.isEmpty());
+        OutboxEvent lastEvent = events.get(events.size() - 1);
+        Assertions.assertEquals("points_failed", lastEvent.getEventType());
+        Assertions.assertTrue(lastEvent.getPayload().contains("not found"));
     }
 
     @Test
@@ -185,7 +212,7 @@ public class WalletServiceTests {
 
     @Test
     @DisplayName("Неуспешная оплата c использованием кешбека")
-    void unSuccessfulCreditPointsWithCashback() {
+    void unSuccessfulCreditPointsWithCashback() throws Exception {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -196,13 +223,20 @@ public class WalletServiceTests {
         BigDecimal totalItemPrice = new BigDecimal("122.22");
         Boolean useCashback = true;
 
-        //when / then
-        Assertions.assertThrows(InsufficientFundsException.class, () -> walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice), "Insufficient funds");
+        //when
+        walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice);
+
+        //then
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        Assertions.assertFalse(events.isEmpty());
+        OutboxEvent lastEvent = events.get(events.size() - 1);
+        Assertions.assertEquals("points_failed", lastEvent.getEventType());
+        Assertions.assertTrue(lastEvent.getPayload().contains("Insufficient funds"));
     }
 
     @Test
     @DisplayName("Неуспешная оплата c использованием кешбека (Баланс меньше чем кешбек нужный для оплаты)")
-    void unSuccessfulCreditPointsWithCashbackBalanceIsLessThanCashback() {
+    void unSuccessfulCreditPointsWithCashbackBalanceIsLessThanCashback() throws Exception {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -216,13 +250,20 @@ public class WalletServiceTests {
         BigDecimal totalItemPrice = new BigDecimal("122.22");
         Boolean useCashback = true;
 
-        //when / then
-        Assertions.assertThrows(InsufficientFundsException.class, () -> walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice), "Insufficient funds");
+        //when
+        walletService.creditPoints(userId, transactionId, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice);
+
+        //then
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        Assertions.assertFalse(events.isEmpty());
+        OutboxEvent lastEvent = events.get(events.size() - 1);
+        Assertions.assertEquals("points_failed", lastEvent.getEventType());
+        Assertions.assertTrue(lastEvent.getPayload().contains("Insufficient funds"));
     }
 
     @Test
     @DisplayName("Неуспешная оплата NPE")
-    void unsuccessfulCreditPointsNPE() {
+    void unsuccessfulCreditPointsNPE() throws Exception {
         //given
         UUID userId = UuidCreator.getTimeOrderedEpoch();
         walletService.createWallet(userId);
@@ -232,8 +273,15 @@ public class WalletServiceTests {
         BigDecimal totalItemPrice = new BigDecimal("122.22");
         Boolean useCashback = false;
 
-        //when / then
-        Assertions.assertThrows(RuntimeException.class, () -> walletService.creditPoints(userId, null, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice));
+        //when
+        walletService.creditPoints(userId, null, amountOfCashback, useCashback, amountOfTransaction, totalItemPrice);
+
+        //then
+        List<OutboxEvent> events = outboxEventRepository.findAll();
+        Assertions.assertFalse(events.isEmpty());
+        OutboxEvent lastEvent = events.get(events.size() - 1);
+        Assertions.assertEquals("points_failed", lastEvent.getEventType());
+        Assertions.assertTrue(lastEvent.getPayload().contains("Unknown error"));
     }
 
     @Test

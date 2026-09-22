@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Component
 @Slf4j
-public class JwtFilter extends OncePerRequestFilter {
+public class AuthHeaderFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {

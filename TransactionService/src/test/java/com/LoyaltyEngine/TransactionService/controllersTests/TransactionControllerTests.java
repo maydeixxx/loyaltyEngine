@@ -23,6 +23,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.ObjectMapper;
 
+import org.springframework.security.test.context.support.WithMockUser;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @Testcontainers
+@WithMockUser(roles = "ADMIN")
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = {
         "eureka.client.enabled=false"
@@ -74,12 +77,13 @@ public class TransactionControllerTests {
     @DisplayName("Успешное создание транзакции")
     void successfulTransactionCreating() throws Exception {
         //given
-        CreateTransaction createTransaction = new CreateTransaction(userId, new BigDecimal("101.2"), items, false);
+        CreateTransaction createTransaction = new CreateTransaction(new BigDecimal("101.2"), items, false);
         UUID idempotencyKey = UUID.randomUUID();
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
                         .header(header, idempotencyKey)
+                        .header("X-User-Id", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createTransaction)))
                 .andExpect(status().isCreated())
@@ -93,14 +97,15 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с уже существующим IK")
     void createTransactionWithExistingIK() throws Exception {
         //given
-        CreateTransaction firstTransaction = new CreateTransaction(userId, new BigDecimal("101.2"), items, false);
-        CreateTransaction secondTransaction = new CreateTransaction(UUID.randomUUID(), new BigDecimal("101.2"), items, false);
+        CreateTransaction firstTransaction = new CreateTransaction(new BigDecimal("101.2"), items, false);
+        CreateTransaction secondTransaction = new CreateTransaction(new BigDecimal("101.2"), items, false);
         UUID idempotencyKey = UUID.randomUUID();
 
         //when && then
         //first request
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
                         .header(header, idempotencyKey)
+                        .header("X-User-Id", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(firstTransaction))
                 )
@@ -108,6 +113,7 @@ public class TransactionControllerTests {
         //second request
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
                         .header(header, idempotencyKey)
+                        .header("X-User-Id", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(secondTransaction))
                 )
@@ -120,11 +126,12 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с невалидным amount")
     void createTransactionWithNotValidAmount() throws Exception {
         //given
-        CreateTransaction transaction = new CreateTransaction(userId, new BigDecimal("0"), items, false);
+        CreateTransaction transaction = new CreateTransaction(new BigDecimal("0"), items, false);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
                         .header(header, UUID.randomUUID())
+                        .header("X-User-Id", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(transaction))
                 )
@@ -136,11 +143,12 @@ public class TransactionControllerTests {
     @DisplayName("Создание транзакции с невалидным items")
     void createTransactionWithNotValidItems() throws Exception {
         //given
-        CreateTransaction transaction = new CreateTransaction(userId, new BigDecimal("0"), List.of(), false);
+        CreateTransaction transaction = new CreateTransaction(new BigDecimal("0"), List.of(), false);
 
         //when && then
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/transactions")
                         .header(header, UUID.randomUUID())
+                        .header("X-User-Id", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(transaction))
                 )

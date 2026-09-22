@@ -46,8 +46,10 @@ public class UserService {
     @Transactional
     public UserDomain createUser(CreateUserDTO userDTO) {
         try {
+            if (userRepository.findUserByEmail(userDTO.email()).isPresent()) throw new CreateUserException("User with email [%s] exists".formatted(userDTO.email()));
+
             UserDomain newUser = UserDomain.createUser(userDTO.email(), userDTO.firstName(), userDTO.lastName(), passwordEncoder.encode(userDTO.password()));
-            userRepository.save(userMapper.domainToEntity(newUser));
+            userRepository.saveAndFlush(userMapper.domainToEntity(newUser));
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
@@ -61,9 +63,9 @@ public class UserService {
 
             outboxEventRepository.save(event);
             return newUser;
-        } catch (DataIntegrityViolationException e) {
-            log.error("Email {} already registered", userDTO.email());
-            throw new CreateUserException("Email [%s] already registered".formatted(userDTO.email()));
+        } catch (CreateUserException e) {
+            log.error(e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Unexpected error creating user: {}", e.getMessage());
             throw new RuntimeException(e);

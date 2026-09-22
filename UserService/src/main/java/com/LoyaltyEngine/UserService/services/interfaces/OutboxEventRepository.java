@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> {
     @Query("""
-    SELECt e FROM OutboxEvent e
+    SELECT e FROM OutboxEvent e
     WHERE e.status = :status
     ORDER BY e.createdAt ASC
 """)
