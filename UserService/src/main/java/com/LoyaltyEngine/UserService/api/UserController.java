@@ -8,6 +8,7 @@ import com.LoyaltyEngine.UserService.models.enums.Role;
 import com.LoyaltyEngine.UserService.services.UserService;
 import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
 import com.LoyaltyEngine.UserService.services.security.UserSecurity;
+import io.micrometer.core.annotation.Timed;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -16,11 +16,14 @@ import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
 import com.LoyaltyEngine.UserService.services.security.JwtService;
 import com.github.f4b6a3.uuid.UuidCreator;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -43,8 +46,15 @@ public class UserService {
     private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    private final MeterRegistry registry;
+    private final Tracer tracer;
+
     @Transactional
     public UserDomain createUser(CreateUserDTO userDTO) {
+        ScopedSpan span = tracer.startScopedSpan("create-user-span");
+        span.tag("user.email", userDTO.email());
+        Timer.Sample sample = Timer.start(registry);
+
         try {
             if (userRepository.findUserByEmail(userDTO.email()).isPresent()) throw new CreateUserException("User with email [%s] exists".formatted(userDTO.email()));
 
@@ -62,13 +72,29 @@ public class UserService {
                     .build();
 
             outboxEventRepository.save(event);
+
+            registry.counter("loyalty.users.registered", "status", "successful").increment();
+            span.tag("status", "SUCCESSFUL");
             return newUser;
         } catch (CreateUserException e) {
+            registry.counter("loyalty.users.registered", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
             log.error(e.getMessage());
             throw e;
         } catch (Exception e) {
+            registry.counter("loyalty.users.registered", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
             log.error("Unexpected error creating user: {}", e.getMessage());
             throw new RuntimeException(e);
+        } finally {
+            sample.stop(registry.timer("loyalty.users.registration.timer"));
+            span.end();
         }
     }
 
