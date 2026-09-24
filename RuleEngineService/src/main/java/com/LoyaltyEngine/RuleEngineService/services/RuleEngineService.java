@@ -6,6 +6,9 @@ import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;
 import com.LoyaltyEngine.RuleEngineService.models.dto.UpdateCashbackModelDTO;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.RuleEngineMapper;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.RuleEngineRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +31,9 @@ public class RuleEngineService {
     private final RuleEngineMapper ruleEngineMapper;
     private final BigDecimal basePercentage = new BigDecimal("1.0");
 
+    private final MeterRegistry registry;
+    private final Tracer tracer;
+
     @Cacheable(value = "cashback_rules", key = "#category.toLowerCase().trim()")
     public BigDecimal getPercentageForCategory(String category) {
         LocalDateTime now = LocalDateTime.now();
@@ -37,16 +43,29 @@ public class RuleEngineService {
 
     @CacheEvict(value = "cashback_rules", allEntries = true)
     public void createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
+        ScopedSpan span = tracer.startScopedSpan("create-new-rule-span");
         try {
             if (ruleEngineRepository.findByCategory(category).isPresent()) throw new EntityExistsException("Rule for category [%s] exists".formatted(category));
             CashbackRuleDomain cashbackRule = CashbackRuleDomain.createCashbackRule(category, percentage, validFrom, validTo);
             ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRule));
+            registry.counter("create.new.rule.count", "status", "successful").increment();
+            span.tag("status", "SUCCESSFUL");
         } catch (EntityExistsException e) {
             log.error(e.getMessage());
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+            registry.counter("create.new.rule.count", "status", "failed").increment();
             throw e;
         } catch (Exception e) {
             log.error("Error creating new rule: {}", e.getMessage());
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+            registry.counter("create.new.rule.count", "status", "failed").increment();
             throw new RuntimeException(e);
+        } finally {
+            span.end();
         }
     }
 

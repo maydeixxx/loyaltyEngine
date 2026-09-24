@@ -76,8 +76,8 @@ public class RuleEngineConsumer {
             log.error("Error handling transaction created event: {}", e.getMessage());
             throw new RuntimeException(e);
         } finally {
-            timer.stop(registry.timer("calculate.cashback.duration"));
             span.end();
+            timer.stop(registry.timer("calculate.cashback.duration"));
         }
 
     }

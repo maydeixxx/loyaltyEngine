@@ -52,7 +52,7 @@ public class TransactionService {
 
     @Transactional
     public TransactionDomain createTransaction(UUID userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
-        ScopedSpan span = tracer.startScopedSpan("transaction-create");
+        ScopedSpan span = tracer.startScopedSpan("transaction-create-span");
         Timer.Sample timer = Timer.start(registry);
 
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);

@@ -93,8 +93,8 @@ public class UserService {
             log.error("Unexpected error creating user: {}", e.getMessage());
             throw new RuntimeException(e);
         } finally {
-            sample.stop(registry.timer("loyalty.users.registration.timer"));
             span.end();
+            sample.stop(registry.timer("loyalty.users.registration.timer"));
         }
     }
 

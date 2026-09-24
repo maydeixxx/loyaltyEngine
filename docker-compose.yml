@@ -10,9 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: loyalty-frontend
     ports:
-      - "80:80"
-    depends_on:
-      - gateway-service
+      - "801:801"
     networks:
       - loyalty-network
     restart: always
