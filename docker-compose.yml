@@ -30,6 +30,7 @@ services:
     environment:
       - EUREKA_INSTANCE_HOSTNAME=eureka-server
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     networks:
       - loyalty-network
     restart: always
@@ -47,6 +48,7 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     depends_on:
       - eureka-server
     networks:
@@ -68,6 +70,7 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     depends_on:
       - postgres-user
       - kafka
@@ -91,6 +94,7 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     depends_on:
       - postgres-wallet
       - kafka
@@ -114,6 +118,7 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     depends_on:
       - postgres-transaction
       - kafka
@@ -138,6 +143,7 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     depends_on:
       - postgres-ruleEngine
       - redis
@@ -201,6 +207,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: loyalty-redis
+    environment:
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     networks:
       - loyalty-network
 
@@ -225,6 +233,47 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - loyalty-network
+
+        # ==========================================
+      # METRICS & OBSERVABILITY
+      # ==========================================
+
+      # Бортовой самописец: собирает метрики раз в 5 сек
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: loyalty-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - loyalty-network
+    restart: always
+
+    # Визуализатор / Дашборды (логин/пароль: admin / admin)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: loyalty-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - loyalty-network
+    restart: always
+
+    # Трассировка распределенных запросов
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: loyalty-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - loyalty-network
+    restart: always
+
 
 volumes:
   postgres_transaction_data:

@@ -3,6 +3,10 @@ package com.LoyaltyEngine.RuleEngineService.services;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionItemEvent;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -21,12 +25,18 @@ public class RuleEngineConsumer {
     private final RuleEngineProducer ruleEngineProducer;
     private final BigDecimal hundred = new BigDecimal("100.0");
 
+    private final MeterRegistry registry;
+    private final Tracer tracer;
+
     @KafkaListener(
             topics = "${kafka.topics.transaction-created}",
             groupId = "rule_engine_service",
             containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
     )
     public void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEvent> record) {
+        ScopedSpan span = tracer.startScopedSpan("calculate-cashback-span");
+        Timer.Sample timer = Timer.start(registry);
+
         try {
             TransactionCreatedEvent model = record.value();
 
@@ -59,10 +69,15 @@ public class RuleEngineConsumer {
             );
 
             ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);
+            registry.counter("calculate.cashback", "status", "successful").increment();
             log.info("Total cashback for transaction {} : {}", transactionId, cashback);
         } catch (Exception e) {
+            registry.counter("calculate.cashback", "status", "failed").increment();
             log.error("Error handling transaction created event: {}", e.getMessage());
             throw new RuntimeException(e);
+        } finally {
+            timer.stop(registry.timer("calculate.cashback.duration"));
+            span.end();
         }
 
     }

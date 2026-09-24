@@ -15,6 +15,10 @@ import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepos
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
 import com.github.f4b6a3.uuid.UuidCreator;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.DataException;
@@ -35,20 +39,29 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TransactionService {
     private final ObjectMapper mapper;
+
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final OutboxEventRepository outboxEventRepository;
+
     @Value("${kafka.topics.transaction-created}")
     private String transactionCreatedTopic;
 
+    private final MeterRegistry registry;
+    private final Tracer tracer;
+
     @Transactional
     public TransactionDomain createTransaction(UUID userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
+        ScopedSpan span = tracer.startScopedSpan("transaction-create");
+        Timer.Sample timer = Timer.start(registry);
+
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
         if (transactionByIdempotencyKey.isPresent()) {
             return transactionByIdempotencyKey.get();
         }
 
         TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, items, useCashback);
+        span.tag("transaction.id", newTransaction.getId().value().toString());
 
         List<TransactionItemEvent> eventItems = items
                 .stream()
@@ -84,11 +97,28 @@ public class TransactionService {
             outboxEventRepository.save(outboxEvent);
 
             log.info("Successfully saved new trans. - id: {}", savedTransaction.getId());
+
+            span.tag("status", "SUCCESSFUL");
+            registry.counter("transaction.create", "status", "successful").increment();
+
             return transactionMapper.transactionEntityToDomain(savedTransaction);
         } catch (DataException e) {
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+            registry.counter("transaction.create", "status", "failed").increment();
+
             throw new TransactionRepositoryException("Error saving new trans.", e);
         } catch (JacksonException e) {
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+            registry.counter("transaction.create", "status", "failed").increment();
+
             throw new TransactionMappingException("Error mapping", e);
+        } finally {
+            span.end();
+            timer.stop(registry.timer("transaction.create.duration"));
         }
     }
 
