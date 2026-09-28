@@ -5,6 +5,7 @@ import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UserDTO;
 import com.LoyaltyEngine.UserService.models.enums.Role;
+import com.LoyaltyEngine.UserService.services.AuthService;
 import com.LoyaltyEngine.UserService.services.UserService;
 import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
 import com.LoyaltyEngine.UserService.services.security.UserSecurity;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class UserController {
     private final UserService userService;
     private final UserMapper userMapper;
+    private final AuthService authService;
 
     @PostMapping("/register")
     public ResponseEntity<UserDTO> registerUser(@RequestBody @Valid CreateUserDTO userDTO) {
@@ -34,7 +36,7 @@ public class UserController {
 
     @PostMapping("/auth")
     public ResponseEntity<String> authenticate(@RequestBody @Valid AuthUserDto userDto) {
-        String jwtToken = userService.login(userDto);
+        String jwtToken = authService.login(userDto);
         return ResponseEntity.ok(jwtToken);
     }
 

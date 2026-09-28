@@ -123,97 +123,24 @@ public class WalletService {
             }
 
             TransactionHandledEvent transactionHandledEvent = new TransactionHandledEvent(transactionId, userId);
-            OutboxEvent event = OutboxEvent.builder()
-                    .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
-                    .eventType(transactionHandled)
-                    .payload(mapper.writeValueAsString(transactionHandledEvent))
-                    .retryCount(0)
-                    .createdAt(LocalDateTime.now())
-                    .status(OutboxStatus.NEW)
-                    .build();
-
+            OutboxEvent event = buildOutboxEvent(transactionId, transactionHandled, mapper.writeValueAsString(transactionHandledEvent));
             outboxEventRepository.save(event);
         } catch (IllegalArgumentException | WalletNotFoundException e) {
-            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
-                    transactionId,
-                    userId,
-                    amount,
-                    "Wallet for %s not found".formatted(userId),
-                    LocalDateTime.now()
-            );
-
-            OutboxEvent event = OutboxEvent.builder()
-                    .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
-                    .eventType(pointsFailed)
-                    .payload(mapper.writeValueAsString(pointsFailedEvent))
-                    .retryCount(0)
-                    .createdAt(LocalDateTime.now())
-                    .status(OutboxStatus.NEW)
-                    .build();
-
+            PointsFailedEvent pointsFailedEvent = buildPointsFailedEvent(transactionId, userId, amount, "Wallet for %s not found".formatted(userId));
+            OutboxEvent event = buildOutboxEvent(transactionId, pointsFailed, mapper.writeValueAsString(pointsFailedEvent));
             outboxEventRepository.save(event);
         } catch (WalletBlockedException e) {
-            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
-                    transactionId,
-                    userId,
-                    amount,
-                    "Wallet is blocked",
-                    LocalDateTime.now()
-            );
-
-            OutboxEvent event = OutboxEvent.builder()
-                    .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
-                    .eventType(pointsFailed)
-                    .payload(mapper.writeValueAsString(pointsFailedEvent))
-                    .retryCount(0)
-                    .createdAt(LocalDateTime.now())
-                    .status(OutboxStatus.NEW)
-                    .build();
-
+            PointsFailedEvent pointsFailedEvent = buildPointsFailedEvent(transactionId, userId, amount, "Wallet is blocked");
+            OutboxEvent event = buildOutboxEvent(transactionId, pointsFailed, mapper.writeValueAsString(pointsFailedEvent));
             outboxEventRepository.save(event);
         } catch (InsufficientFundsException e) {
-            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
-                    transactionId,
-                    userId,
-                    amount,
-                    "Insufficient funds",
-                    LocalDateTime.now()
-            );
-
-            OutboxEvent event = OutboxEvent.builder()
-                    .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
-                    .eventType(pointsFailed)
-                    .payload(mapper.writeValueAsString(pointsFailedEvent))
-                    .retryCount(0)
-                    .createdAt(LocalDateTime.now())
-                    .status(OutboxStatus.NEW)
-                    .build();
-
+            PointsFailedEvent pointsFailedEvent = buildPointsFailedEvent(transactionId, userId, amount, "Insufficient funds");
+            OutboxEvent event = buildOutboxEvent(transactionId, pointsFailed, mapper.writeValueAsString(pointsFailedEvent));
             outboxEventRepository.save(event);
         } catch (Exception e) {
             log.error("Error crediting points to user {}: {}", userId, e.getMessage());
-            PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
-                    transactionId,
-                    userId,
-                    amount,
-                    "Unknown error",
-                    LocalDateTime.now()
-            );
-
-            OutboxEvent event = OutboxEvent.builder()
-                    .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
-                    .eventType(pointsFailed)
-                    .payload(mapper.writeValueAsString(pointsFailedEvent))
-                    .retryCount(0)
-                    .createdAt(LocalDateTime.now())
-                    .status(OutboxStatus.NEW)
-                    .build();
-
+            PointsFailedEvent pointsFailedEvent = buildPointsFailedEvent(transactionId, userId, amount, "Unknown error");
+            OutboxEvent event = buildOutboxEvent(transactionId, pointsFailed, mapper.writeValueAsString(pointsFailedEvent));
             outboxEventRepository.save(event);
         }
     }
@@ -284,6 +211,38 @@ public class WalletService {
             throw e;
         } catch (Exception e) {
             log.error("Unexcepted error: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    private OutboxEvent buildOutboxEvent(UUID aggregateId, String eventType, String payload) {
+        try {
+            return OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
+                    .aggregateId(aggregateId)
+                    .eventType(eventType)
+                    .payload(payload)
+                    .createdAt(LocalDateTime.now())
+                    .status(OutboxStatus.NEW)
+                    .retryCount(0)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error building new event for topic {}: {}", eventType, e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    private PointsFailedEvent buildPointsFailedEvent(UUID transactionId, UUID userId, BigDecimal amount, String cause) {
+        try {
+            return new PointsFailedEvent(
+                    transactionId,
+                    userId,
+                    amount,
+                    cause,
+                    LocalDateTime.now()
+            );
+        } catch (Exception e) {
+            log.error("Error building points failed event. Transaction: {} || User: {} || CAUSE: {}", transactionId, userId, e.getMessage());
             throw new RuntimeException(e);
         }
     }

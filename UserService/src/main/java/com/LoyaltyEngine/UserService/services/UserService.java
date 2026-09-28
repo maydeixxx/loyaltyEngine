@@ -40,7 +40,6 @@ public class UserService {
     private final UserMapper userMapper;
     private final UserRepository userRepository;
 
-    private final JwtService jwtService;
     private final BCryptPasswordEncoder passwordEncoder;
 
     @Transactional
@@ -153,27 +152,6 @@ public class UserService {
             throw e;
         } catch (Exception e) {
             log.error("Error getting user by email: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    public String login(AuthUserDto userDto) {
-        try {
-            String email = userDto.email();
-            String password = userDto.password();
-
-            User user = userRepository.findUserByEmail(email)
-                    .orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
-
-            if (!passwordEncoder.matches(password, user.getHashedPassword())) {
-                throw new AuthenticationException("Password is incorrect");
-            }
-            return jwtService.generateJwtToken(user);
-        } catch (UserNotFoundException | AuthenticationException e) {
-            log.error(e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error logging in: {}", e.getMessage());
             throw new RuntimeException(e);
         }
     }
