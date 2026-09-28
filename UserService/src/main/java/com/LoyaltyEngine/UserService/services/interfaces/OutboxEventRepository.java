@@ -10,10 +10,11 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> {
-    @Query("""
-    SELECT e FROM OutboxEvent e
-    WHERE e.status = :status
-    ORDER BY e.createdAt ASC
-""")
+    @Query(value = """
+                SELECT * FROM outbox_event e
+                WHERE e.status = :status
+                ORDER BY e.created_at ASC
+                FOR UPDATE SKIP LOCKED
+            """, nativeQuery = true)
     List<OutboxEvent> findOutboxEvents(OutboxStatus status, Pageable pageable);
 }

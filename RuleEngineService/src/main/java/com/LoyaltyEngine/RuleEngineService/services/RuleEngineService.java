@@ -4,7 +4,6 @@ import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackRuleNotFoundExcept
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRule;
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;
 import com.LoyaltyEngine.RuleEngineService.models.dto.UpdateCashbackModelDTO;
-import com.LoyaltyEngine.RuleEngineService.services.interfaces.RuleEngineMapper;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.RuleEngineRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.tracing.ScopedSpan;
@@ -36,16 +35,22 @@ public class RuleEngineService {
 
     @Cacheable(value = "cashback_rules", key = "#category.toLowerCase().trim()")
     public BigDecimal getPercentageForCategory(String category) {
-        LocalDateTime now = LocalDateTime.now();
-        Optional<BigDecimal> cashbackRule = ruleEngineRepository.findActivePercentageByCategory(category.toLowerCase().trim(), now);
-        return cashbackRule.orElse(basePercentage);
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            Optional<BigDecimal> cashbackRule = ruleEngineRepository.findActivePercentageByCategory(category.toLowerCase().trim(), now);
+            return cashbackRule.orElse(basePercentage);
+        } catch (Exception e) {
+            log.error("Error finding rules for category {}: {}", category.toLowerCase().trim(), e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     @CacheEvict(value = "cashback_rules", allEntries = true)
     public void createCashbackRule(String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
         ScopedSpan span = tracer.startScopedSpan("create-new-rule-span");
         try {
-            if (ruleEngineRepository.findByCategory(category).isPresent()) throw new EntityExistsException("Rule for category [%s] exists".formatted(category));
+            if (ruleEngineRepository.findByCategory(category).isPresent())
+                throw new EntityExistsException("Rule for category [%s] exists".formatted(category));
             CashbackRuleDomain cashbackRule = CashbackRuleDomain.createCashbackRule(category, percentage, validFrom, validTo);
             ruleEngineRepository.save(ruleEngineMapper.domainToEntity(cashbackRule));
             registry.counter("create.new.rule.count", "status", "successful").increment();

@@ -40,7 +40,7 @@ public class WalletService {
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
 
-    private final OutboxEventRepository outboxEventRepository;
+    private final OutboxEventService outboxEventService;
     private final ObjectMapper mapper;
 
     @Value("${kafka.topics.transaction-handled}")
@@ -147,7 +147,7 @@ public class WalletService {
 
             registry.counter("wallet.credit.points.counter", "status", "successful").increment();
             span.tag("status", "SUCCESSFUL");
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
         } catch (IllegalArgumentException | WalletNotFoundException e) {
             registry.counter("wallet.credit.points.counter", "status", "failed").increment();
             span.error(e);
@@ -173,7 +173,9 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (WalletBlockedException e) {
             registry.counter("wallet.credit.points.counter", "status", "failed").increment();
             span.error(e);
@@ -199,7 +201,9 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (InsufficientFundsException e) {
             registry.counter("wallet.credit.points.counter", "status", "failed").increment();
             span.error(e);
@@ -225,7 +229,9 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (Exception e) {
             registry.counter("wallet.credit.points.counter", "status", "failed").increment();
             span.error(e);
@@ -252,7 +258,9 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw new RuntimeException(e);
         } finally {
             span.end();
             timer.stop(registry.timer("wallet.credit.points.duration"));

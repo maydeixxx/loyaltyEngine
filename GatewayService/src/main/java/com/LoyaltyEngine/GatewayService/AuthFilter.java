@@ -42,7 +42,7 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
             String path = request.getURI().getPath();
 
-            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register")) {
+            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register") || path.contains("/actuator")) {
                 return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
             }
 

@@ -4,7 +4,7 @@ import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.dto.CreateTransaction;
 import com.LoyaltyEngine.TransactionService.models.dto.TransactionDTO;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
-import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
+import com.LoyaltyEngine.TransactionService.services.TransactionMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

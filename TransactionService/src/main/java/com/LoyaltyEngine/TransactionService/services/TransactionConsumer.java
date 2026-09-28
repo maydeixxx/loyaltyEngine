@@ -24,7 +24,7 @@ public class TransactionConsumer {
             groupId = "transaction_service",
             containerFactory = "pointsFailedEventConcurrentKafkaListenerContainerFactory"
     )
-    private void handlePointsFailed(ConsumerRecord<UUID, PointsFailedEvent> record) {
+    public void handlePointsFailed(ConsumerRecord<UUID, PointsFailedEvent> record) {
         try {
             UUID transactionId = record.key();
             PointsFailedEvent pointsFailed = record.value();
@@ -46,7 +46,7 @@ public class TransactionConsumer {
             groupId = "transaction_service",
             containerFactory = "transactionHandledEventContainerFactory"
     )
-    private void handleTransactionHandledEvent(ConsumerRecord<UUID, TransactionHandledEvent> record) {
+    public void handleTransactionHandledEvent(ConsumerRecord<UUID, TransactionHandledEvent> record) {
         try {
             TransactionHandledEvent model = record.value();
             UUID transactionId = model.getTransactionId();

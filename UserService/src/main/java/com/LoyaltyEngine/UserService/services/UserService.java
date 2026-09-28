@@ -12,7 +12,6 @@ import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
 import com.LoyaltyEngine.UserService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.UserService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.UserService.services.interfaces.OutboxEventRepository;
-import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
 import com.LoyaltyEngine.UserService.services.security.JwtService;
 import com.github.f4b6a3.uuid.UuidCreator;
