@@ -56,10 +56,11 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    @InjectMocks
+    private AuthService authService;
+
     @Captor
     private ArgumentCaptor<OutboxEvent> outboxEventCaptor;
-    @Captor
-    private ArgumentCaptor<User> userCaptor;
 
     private static final String TOPIC_NAME = "user_created";
     private static final String TEST_EMAIL = "alex@example.com";
@@ -584,7 +585,7 @@ class UserServiceTest {
         when(jwtService.generateJwtToken(user)).thenReturn(expectedToken);
 
         //when
-        String token = userService.login(authDto);
+        String token = authService.login(authDto);
 
         //then
         assertEquals(expectedToken, token);
@@ -599,7 +600,7 @@ class UserServiceTest {
         //when & then
         UserNotFoundException exception = assertThrows(
                 UserNotFoundException.class,
-                () -> userService.login(authDto)
+                () -> authService.login(authDto)
         );
         assertEquals("User by email [%s] not found".formatted(TEST_EMAIL), exception.getMessage());
     }
@@ -616,7 +617,7 @@ class UserServiceTest {
         //when & then
         AuthenticationException exception = assertThrows(
                 AuthenticationException.class,
-                () -> userService.login(authDto)
+                () -> authService.login(authDto)
         );
         assertEquals("Password is incorrect", exception.getMessage());
     }
@@ -630,7 +631,7 @@ class UserServiceTest {
         //when & then
         assertThrows(
                 RuntimeException.class,
-                () -> userService.login(authDto)
+                () -> authService.login(authDto)
         );
     }
 

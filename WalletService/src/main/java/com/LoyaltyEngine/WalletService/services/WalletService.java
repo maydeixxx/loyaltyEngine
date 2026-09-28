@@ -148,6 +148,8 @@ public class WalletService {
             PointsFailedEvent pointsFailedEvent = buildPointsFailedEvent(transactionId, userId, amount, "Wallet for %s not found".formatted(userId));
             OutboxEvent event = buildOutboxEvent(transactionId, pointsFailed, mapper.writeValueAsString(pointsFailedEvent));
             outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (WalletBlockedException e) {
             registry.counter("wallet.credit.points.counter", "status", "failed").increment();
             span.error(e);
@@ -176,6 +178,8 @@ public class WalletService {
             PointsFailedEvent pointsFailedEvent = buildPointsFailedEvent(transactionId, userId, amount, "Unknown error");
             OutboxEvent event = buildOutboxEvent(transactionId, pointsFailed, mapper.writeValueAsString(pointsFailedEvent));
             outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } finally {
             span.end();
             timer.stop(registry.timer("wallet.credit.points.duration"));
