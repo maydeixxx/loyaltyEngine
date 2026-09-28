@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +22,6 @@ public interface RuleEngineRepository extends JpaRepository<CashbackRule, UUID> 
                     LIMIT 1
             """)
     Optional<BigDecimal> findActivePercentageByCategory(String category, LocalDateTime now);
+
+    Optional<CashbackRule> findByCategory(String category);
 }

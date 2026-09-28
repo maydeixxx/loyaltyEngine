@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.TransactionService.services.interfaces;
+package com.LoyaltyEngine.TransactionService.services;
 
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
@@ -10,7 +10,6 @@ import com.LoyaltyEngine.TransactionService.models.entity.TransactionItem;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Currency;
 import java.util.List;
 
 

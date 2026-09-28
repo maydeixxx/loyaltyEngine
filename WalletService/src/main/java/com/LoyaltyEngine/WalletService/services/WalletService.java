@@ -15,6 +15,10 @@ import com.LoyaltyEngine.WalletService.services.interfaces.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.f4b6a3.uuid.UuidCreator;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,13 +40,16 @@ public class WalletService {
     private final WalletMapper walletMapper;
     private final WalletTransactionMapper walletTransactionMapper;
 
-    private final OutboxEventRepository outboxEventRepository;
+    private final OutboxEventService outboxEventService;
     private final ObjectMapper mapper;
 
     @Value("${kafka.topics.transaction-handled}")
     private String transactionHandled;
     @Value("${kafka.topics.points-failed}")
     private String pointsFailed;
+
+    private final MeterRegistry registry;
+    private final Tracer tracer;
 
     public void createWallet(UUID userId) {
         try {
@@ -61,6 +68,9 @@ public class WalletService {
 
     @Transactional
     public void creditPoints(UUID userId, UUID transactionId, BigDecimal amount, Boolean useCashback, BigDecimal amountOfTransaction, BigDecimal totalItemPrice) throws JsonProcessingException {
+        ScopedSpan span = tracer.startScopedSpan("wallet-credit-points-span");
+        Timer.Sample timer = Timer.start(registry);
+
         try {
             WalletDomain wallet = findWalletByUserId(userId);
             Optional<WalletTransaction> walletTransactionByTransactionId = walletTransactionRepository.findWalletTransactionByTransactionId(transactionId);
@@ -100,6 +110,7 @@ public class WalletService {
 
                 walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
                 walletRepository.save(walletMapper.domainToEntity(wallet));
+                span.tag("wallet-transaction-id", redeemCashback.getId().value().toString());
             } else if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
                 throw new InsufficientFundsException("Insufficient funds");
             }
@@ -119,6 +130,7 @@ public class WalletService {
 
                 walletTransactionRepository.save(walletTransactionMapper.domainToEntity(walletTransaction));
                 walletRepository.save(walletMapper.domainToEntity(wallet));
+                span.tag("wallet-transaction-id", walletTransaction.getId().value().toString());
                 log.info("Points credited: user {} || transaction {} || amount of transaction {}", userId, transactionId, amountOfTransaction);
             }
 
@@ -133,8 +145,16 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            registry.counter("wallet.credit.points.counter", "status", "successful").increment();
+            span.tag("status", "SUCCESSFUL");
+            outboxEventService.saveNewOutboxEvent(event);
         } catch (IllegalArgumentException | WalletNotFoundException e) {
+            registry.counter("wallet.credit.points.counter", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -145,7 +165,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -153,8 +173,16 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (WalletBlockedException e) {
+            registry.counter("wallet.credit.points.counter", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -165,7 +193,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -173,8 +201,16 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (InsufficientFundsException e) {
+            registry.counter("wallet.credit.points.counter", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -185,7 +221,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -193,9 +229,17 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw e;
         } catch (Exception e) {
+            registry.counter("wallet.credit.points.counter", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
             log.error("Error crediting points to user {}: {}", userId, e.getMessage());
+            UUID aggId = transactionId != null ? transactionId : (userId != null ? userId : UuidCreator.getTimeOrderedEpoch());
             PointsFailedEvent pointsFailedEvent = new PointsFailedEvent(
                     transactionId,
                     userId,
@@ -206,7 +250,7 @@ public class WalletService {
 
             OutboxEvent event = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
+                    .aggregateId(aggId)
                     .eventType(pointsFailed)
                     .payload(mapper.writeValueAsString(pointsFailedEvent))
                     .retryCount(0)
@@ -214,7 +258,12 @@ public class WalletService {
                     .status(OutboxStatus.NEW)
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventService.saveNewOutboxEvent(event);
+
+            throw new RuntimeException(e);
+        } finally {
+            span.end();
+            timer.stop(registry.timer("wallet.credit.points.duration"));
         }
     }
 

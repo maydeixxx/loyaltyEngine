@@ -22,7 +22,7 @@ public class WalletConsumer {
             groupId = "wallet_service",
             containerFactory = "calculatedCashbackEventModelConcurrentKafkaListenerContainerFactory"
     )
-    private void handlePointsCalculatedEvent(ConsumerRecord<UUID, CalculatedCashbackEventModel> record, Acknowledgment ack) {
+    public void handlePointsCalculatedEvent(ConsumerRecord<UUID, CalculatedCashbackEventModel> record, Acknowledgment ack) {
         UUID transactionId = record.key();
         CalculatedCashbackEventModel model = record.value();
         UUID userId = model.userId();

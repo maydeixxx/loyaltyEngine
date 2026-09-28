@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.WalletService.services.interfaces;
+package com.LoyaltyEngine.WalletService.services;
 
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.dto.WalletTransactionDto;

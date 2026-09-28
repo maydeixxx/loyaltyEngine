@@ -17,27 +17,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CashbackRuleNotFoundException.class)
     public ResponseEntity<ErrorResponse> handlerCashbackRuleNotFoundException(CashbackRuleNotFoundException e, WebRequest request) {
-        ErrorResponse response = ErrorResponse.builder()
-                .error("Rule not found")
-                .code(404)
-                .message(e.getMessage())
-                .path(request.getDescription(false).replace("uri=", ""))
-                .timestamp(LocalDateTime.now())
-                .build();
-
+        ErrorResponse response = buildErrorResponse("Rule not found", e.getMessage(), 404, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @ExceptionHandler(CashbackRuleValidationException.class)
     public ResponseEntity<ErrorResponse> handlerCashbackRuleValidationException(CashbackRuleValidationException e, WebRequest request) {
-        ErrorResponse response = ErrorResponse.builder()
-                .error("Not valid data")
-                .message(e.getMessage())
-                .code(400)
-                .path(request.getDescription(false).replace("uri=", ""))
-                .timestamp(LocalDateTime.now())
-                .build();
-
+        ErrorResponse response = buildErrorResponse("Not valid data", e.getMessage(), 400, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -49,27 +35,29 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        ErrorResponse response = ErrorResponse.builder()
-                .error("Not valid data")
-                .message(errors)
-                .code(400)
-                .path(request.getDescription(false).replace("uri=", ""))
-                .timestamp(LocalDateTime.now())
-                .build();
-
+        ErrorResponse response = buildErrorResponse("Not valid data", errors, 400, request);
         return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        ErrorResponse errorResponse = buildErrorResponse("Illegal argument", ex.getMessage(), 400, request);
+        return ResponseEntity.status(errorResponse.getCode()).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handlerException(Exception e, WebRequest request) {
-        ErrorResponse response = ErrorResponse.builder()
-                .error("Server error")
-                .message(e.getMessage())
-                .code(500)
+        ErrorResponse response = buildErrorResponse("Server error", e.getMessage(), 500, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    private ErrorResponse buildErrorResponse(String error, String message, int code, WebRequest request) {
+        return ErrorResponse.builder()
+                .error(error)
+                .message(message)
+                .code(code)
                 .path(request.getDescription(false).replace("uri=", ""))
                 .timestamp(LocalDateTime.now())
                 .build();
-
-        return ResponseEntity.status(response.getCode()).body(response);
     }
 }

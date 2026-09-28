@@ -9,12 +9,13 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> {
-    @Query("""
-            SELECT e FROM OutboxEvent e
+    @Query(value = """
+            SELECT * FROM outbox_event e
             WHERE e.status = :status
-            AND e.retryCount <= 3
-            ORDER BY e.createdAt ASC
+            AND e.retry_count <= 3
+            ORDER BY e.created_at ASC
             LIMIT 50
-            """)
+            FOR UPDATE SKIP LOCKED
+            """, nativeQuery = true)
     List<OutboxEvent> findOutBoxEvents(OutboxStatus status);
 }

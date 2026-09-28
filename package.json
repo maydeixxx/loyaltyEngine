@@ -1,0 +1,11 @@
+{
+  "name": "loyalty-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LoyaltyEngine root helper scripts",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint"
+  }
+}

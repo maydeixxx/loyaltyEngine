@@ -11,6 +11,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -27,12 +28,24 @@ public class AuthFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
         try {
-            String path = exchange.getRequest().getURI().getPath();
-
-            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register"))
-                return chain.filter(exchange);
-
             ServerHttpRequest request = exchange.getRequest();
+            ServerHttpRequest removedHeadersRequest = request.mutate().headers(headers -> {
+                        headers.remove("X-User-Role");
+                        headers.remove("X-User-Id");
+                        headers.remove("X-User-Email");
+                    })
+                    .build();
+
+            if (HttpMethod.OPTIONS.equals(request.getMethod())) {
+                return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
+            }
+
+            String path = request.getURI().getPath();
+
+            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register") || path.contains("/actuator")) {
+                return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
+            }
+
             String authorizationHeader;
             String jwtToken;
 

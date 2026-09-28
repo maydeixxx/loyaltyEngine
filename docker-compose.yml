@@ -1,10 +1,162 @@
 version: '3.8'
+
 services:
-  postgres-transaction:
-    image: postgres:15
-    container_name: loyalty-postgres-transaction
+  # ==========================================
+  # Фронтенд
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: loyalty-frontend
     ports:
-      - "5432:5432"
+      - "801:801"
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Spring Cloud Eureka (Service Discovery)
+  # ==========================================
+  eureka-server:
+    build:
+      context: ./EurekaServer
+      dockerfile: Dockerfile
+    container_name: loyalty-eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_INSTANCE_HOSTNAME=eureka-server
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Spring Cloud API Gateway
+  # ==========================================
+  gateway-service:
+    build:
+      context: ./GatewayService
+      dockerfile: Dockerfile
+    container_name: loyalty-gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
+    depends_on:
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # User Service
+  # ==========================================
+  user-service:
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+    container_name: loyalty-user-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-user:5432/users_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
+    depends_on:
+      - postgres-user
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Wallet Service
+  # ==========================================
+  wallet-service:
+    build:
+      context: ./WalletService
+      dockerfile: Dockerfile
+    container_name: loyalty-wallet-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-wallet:5432/wallet_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
+    depends_on:
+      - postgres-wallet
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Transaction Service
+  # ==========================================
+  transaction-service:
+    build:
+      context: ./TransactionService
+      dockerfile: Dockerfile
+    container_name: loyalty-transaction-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-transaction:5432/loyalty_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
+    depends_on:
+      - postgres-transaction
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Rule Engine Service
+  # ==========================================
+  rule-engine-service:
+    build:
+      context: ./RuleEngineService
+      dockerfile: Dockerfile
+    container_name: loyalty-rule-engine-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-ruleEngine:5432/ruleEngine_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=admin
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATA_REDIS_HOST=redis
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
+    depends_on:
+      - postgres-ruleEngine
+      - redis
+      - kafka
+      - eureka-server
+    networks:
+      - loyalty-network
+    restart: always
+
+  # ==========================================
+  # Базы данных, кафка
+  # ==========================================
+  postgres-transaction:
+    image: postgres:15-alpine
+    container_name: loyalty-postgres-transaction
     environment:
       POSTGRES_DB: loyalty_db
       POSTGRES_USER: postgres
@@ -15,10 +167,8 @@ services:
       - loyalty-network
 
   postgres-ruleEngine:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: loyalty-postgres-ruleEngine
-    ports:
-      - "5433:5432"
     environment:
       POSTGRES_DB: ruleEngine_db
       POSTGRES_USER: postgres
@@ -29,10 +179,8 @@ services:
       - loyalty-network
 
   postgres-wallet:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: loyalty-postgres-wallet
-    ports:
-      - "5434:5432"
     environment:
       POSTGRES_DB: wallet_db
       POSTGRES_USER: postgres
@@ -43,10 +191,8 @@ services:
       - loyalty-network
 
   postgres-user:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: loyalty-postgres-user
-    ports:
-      - "5435:5432"
     environment:
       POSTGRES_DB: users_db
       POSTGRES_USER: postgres
@@ -59,8 +205,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: loyalty-redis
-    ports:
-      - "6379:6379"
+    environment:
+      - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     networks:
       - loyalty-network
 
@@ -78,16 +224,45 @@ services:
     container_name: loyalty-kafka
     depends_on:
       - zookeeper
-    ports:
-      - "9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - loyalty-network
 
+        # ==========================================
+      # METRICS & OBSERVABILITY
+      # ==========================================
+
+      # Бортовой самописец: собирает метрики раз в 5 сек
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: loyalty-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - loyalty-network
+    restart: always
+
+    # Визуализатор / Дашборды (логин/пароль: admin / admin)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: loyalty-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - loyalty-network
+    restart: always
+
+    # Трассировка распределенных запросов
   zipkin:
     image: openzipkin/zipkin:latest
     container_name: loyalty-zipkin
@@ -95,6 +270,8 @@ services:
       - "9411:9411"
     networks:
       - loyalty-network
+    restart: always
+
 
 volumes:
   postgres_transaction_data:

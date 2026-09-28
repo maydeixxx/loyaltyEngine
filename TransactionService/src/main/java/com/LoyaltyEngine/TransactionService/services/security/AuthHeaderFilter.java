@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.WalletService.services.security;
+package com.LoyaltyEngine.TransactionService.services.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Component
 @Slf4j
-public class JwtFilter extends OncePerRequestFilter {
+public class AuthHeaderFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {

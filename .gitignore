@@ -24,6 +24,8 @@ Dockerfile.*
 *.ipr
 *.md
 
+env.env
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
