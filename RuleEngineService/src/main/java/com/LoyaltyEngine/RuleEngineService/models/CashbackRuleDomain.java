@@ -15,7 +15,7 @@ public class CashbackRuleDomain {
     private String category;
     private BigDecimal percentage;
     private final LocalDateTime validFrom;
-    private final LocalDateTime validTo;
+    private LocalDateTime validTo;
 
     private CashbackRuleDomain(RuleId id, String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {
         LocalDateTime now = LocalDateTime.now();
@@ -61,13 +61,18 @@ public class CashbackRuleDomain {
     }
 
     public void updateCategory(String category) {
-        if (category.isBlank() || this.category.equals(category)) throw new IllegalArgumentException("Cant change category");
+        if (category == null || category.isBlank() || this.category.equals(category)) throw new IllegalArgumentException("Cant change category");
         this.category = category;
     }
 
     public void updatePercentage(BigDecimal percentage) {
         if (percentage == null || this.percentage.equals(percentage) || percentage.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("Cant change percentage");
         this.percentage = percentage;
+    }
+
+    public void updateValidTo(LocalDateTime newValidTo) {
+        if (newValidTo == null) throw new IllegalArgumentException("New valid to cant be null");
+        this.validTo = newValidTo;
     }
 
     @Override

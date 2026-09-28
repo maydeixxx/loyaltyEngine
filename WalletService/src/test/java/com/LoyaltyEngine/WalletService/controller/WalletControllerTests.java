@@ -5,7 +5,7 @@ import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.dto.CreateWalletDTO;
 import com.LoyaltyEngine.WalletService.models.entity.Wallet;
 import com.LoyaltyEngine.WalletService.services.WalletService;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
+import com.LoyaltyEngine.WalletService.services.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.f4b6a3.uuid.UuidCreator;

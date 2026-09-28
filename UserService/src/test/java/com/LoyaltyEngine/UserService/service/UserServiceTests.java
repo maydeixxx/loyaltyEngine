@@ -37,10 +37,10 @@ import java.util.UUID;
 })
 public class UserServiceTests {
     @Container
-    private static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18.2");
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18.2");
 
     @Container
-    private static KafkaContainer kafka = new KafkaContainer("apache/kafka:latest");
+    private static final KafkaContainer kafka = new KafkaContainer("apache/kafka:latest");
 
     @DynamicPropertySource
     private static void configProperties(DynamicPropertyRegistry registry) {

@@ -12,9 +12,13 @@ import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreatedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionItemEvent;
 import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepository;
-import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.f4b6a3.uuid.UuidCreator;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.DataException;
@@ -22,7 +26,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,20 +38,29 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TransactionService {
     private final ObjectMapper mapper;
+
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
     private final OutboxEventRepository outboxEventRepository;
+
     @Value("${kafka.topics.transaction-created}")
     private String transactionCreatedTopic;
 
+    private final MeterRegistry registry;
+    private final Tracer tracer;
+
     @Transactional
     public TransactionDomain createTransaction(UUID userId, BigDecimal amount, List<TransactionItemDomain> items, UUID idempotencyKey, Boolean useCashback) {
+        ScopedSpan span = tracer.startScopedSpan("transaction-create-span");
+        Timer.Sample timer = Timer.start(registry);
+
         Optional<TransactionDomain> transactionByIdempotencyKey = getTransactionByIdempotencyKey(idempotencyKey);
         if (transactionByIdempotencyKey.isPresent()) {
             return transactionByIdempotencyKey.get();
         }
 
         TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, items, useCashback);
+        span.tag("transaction.id", newTransaction.getId().value().toString());
 
         List<TransactionItemEvent> eventItems = items
                 .stream()
@@ -84,11 +96,36 @@ public class TransactionService {
             outboxEventRepository.save(outboxEvent);
 
             log.info("Successfully saved new trans. - id: {}", savedTransaction.getId());
+
+            span.tag("status", "SUCCESSFUL");
+            registry.counter("transaction.create", "status", "successful").increment();
+
             return transactionMapper.transactionEntityToDomain(savedTransaction);
         } catch (DataException e) {
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+            registry.counter("transaction.create", "status", "failed").increment();
+
             throw new TransactionRepositoryException("Error saving new trans.", e);
         } catch (JacksonException e) {
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+            registry.counter("transaction.create", "status", "failed").increment();
+
             throw new TransactionMappingException("Error mapping", e);
+        } catch (Exception e) {
+            registry.counter("transaction.create", "status", "failed").increment();
+            span.error(e);
+            span.tag("error.message", e.getMessage());
+            span.tag("status", "FAILED");
+
+            log.error("Unexpected error: {}", e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+            span.end();
+            timer.stop(registry.timer("transaction.create.duration"));
         }
     }
 
