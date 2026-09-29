@@ -7,6 +7,8 @@ import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
+import com.LoyaltyEngine.UserService.models.dto.UpdateEmailDTO;
+import com.LoyaltyEngine.UserService.models.dto.UpdatePasswordDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
 import com.LoyaltyEngine.UserService.services.AuthService;
 import com.LoyaltyEngine.UserService.services.UserService;
@@ -210,7 +212,7 @@ public class UserServiceTests {
     void successfulUpdateFirstName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("firstname", null, "NewName", null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO("NewName", null);
 
         //when
         userService.updateUser(user.getEmail(), updateDTO);
@@ -225,7 +227,7 @@ public class UserServiceTests {
     void successfulUpdateLastName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("lastname", null, null, "NewLastName", null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(null, "NewLastName");
 
         //when
         userService.updateUser(user.getEmail(), updateDTO);
@@ -241,10 +243,10 @@ public class UserServiceTests {
         //given
         UserDomain user = userService.createUser(createUserDTO);
         String newEmail = "newemail@gmail.com";
-        UpdateUserDTO updateDTO = new UpdateUserDTO("email", newEmail, null, null, null, null);
+        UpdateEmailDTO updateDTO = new UpdateEmailDTO(newEmail);
 
         //when
-        userService.updateUser(user.getEmail(), updateDTO);
+        authService.updateEmail(user.getEmail(), updateDTO);
         UserDomain updatedUser = userService.findUserByEmail(newEmail);
 
         //then
@@ -257,10 +259,10 @@ public class UserServiceTests {
         //given
         UserDomain user = userService.createUser(createUserDTO);
         String newPassword = "NewPassword123!!!";
-        UpdateUserDTO updateDTO = new UpdateUserDTO("password", null, null, null, newPassword, createUserDTO.password());
+        UpdatePasswordDTO updateDTO = new UpdatePasswordDTO(createUserDTO.password(), newPassword);
 
         //when
-        userService.updateUser(user.getEmail(), updateDTO);
+        authService.updateUserPassword(user.getEmail(), updateDTO);
         String token = authService.login(new AuthUserDto(user.getEmail(), newPassword));
 
         //then
@@ -272,10 +274,10 @@ public class UserServiceTests {
     void unsuccessfulUpdateSameEmail() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("email", createUserDTO.email(), null, null, null, null);
+        UpdateEmailDTO updateDTO = new UpdateEmailDTO(createUserDTO.email());
 
         //when && then
-        Assertions.assertThrows(UserUpdateException.class, () -> userService.updateUser(user.getEmail(), updateDTO), "You cant enter the same email");
+        Assertions.assertThrows(UserUpdateException.class, () -> authService.updateEmail(user.getEmail(), updateDTO), "You cant enter the same email");
     }
 
     @Test
@@ -283,7 +285,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateSameFirstName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("firstname", null, createUserDTO.firstName(), null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(createUserDTO.firstName(), null);
 
         //when && then
         Assertions.assertThrows(UserUpdateException.class, () -> userService.updateUser(user.getEmail(), updateDTO), "You already have this first name");
@@ -294,7 +296,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateSameLastName() {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("lastname", null, null, createUserDTO.lastName(), null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(null, createUserDTO.lastName());
 
         //when && then
         Assertions.assertThrows(UserUpdateException.class, () -> userService.updateUser(user.getEmail(), updateDTO), "You already have this last name");
@@ -305,7 +307,7 @@ public class UserServiceTests {
     void unsuccessfulUpdateUserNotFound() {
         //given
         String email = "unknown@gmail.com";
-        UpdateUserDTO updateDTO = new UpdateUserDTO("firstname", null, "NewName", null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO("NewName", null);
 
         //when && then
         Assertions.assertThrows(UserNotFoundException.class, () -> userService.updateUser(email, updateDTO), "User by email [%s] not found".formatted(email));

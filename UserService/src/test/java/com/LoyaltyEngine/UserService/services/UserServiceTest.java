@@ -8,6 +8,8 @@ import com.LoyaltyEngine.UserService.models.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
+import com.LoyaltyEngine.UserService.models.dto.UpdateEmailDTO;
+import com.LoyaltyEngine.UserService.models.dto.UpdatePasswordDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
 import com.LoyaltyEngine.UserService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.UserService.models.enums.OutboxStatus;
@@ -270,22 +272,9 @@ class UserServiceTest {
     // ==========================================
 
     @Test
-    void updateUser_missingFieldToUpdate_throwsNullPointerException() {
-        //given
-        UpdateUserDTO dto = new UpdateUserDTO(null, null, null, null, null, null);
-
-        //when & then
-        NullPointerException exception = assertThrows(
-                NullPointerException.class,
-                () -> userService.updateUser(TEST_EMAIL, dto)
-        );
-        assertEquals("Field to update is required", exception.getMessage());
-    }
-
-    @Test
     void updateUser_missingUser_throwsUserNotFoundException() {
         //given
-        UpdateUserDTO dto = new UpdateUserDTO("email", "new@test.com", null, null, null, null);
+        UpdateUserDTO dto = new UpdateUserDTO("Alexander", "Johnson");
         when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
 
         //when & then
@@ -296,48 +285,10 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUser_validEmail_updatesEmailAndSaves() {
-        //given
-        String newEmail = "updated@example.com";
-        UpdateUserDTO dto = new UpdateUserDTO("email", newEmail, null, null, null, null);
-        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-
-        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
-        when(userMapper.entityToDomain(entity)).thenReturn(domain);
-        when(userMapper.domainToEntity(domain)).thenReturn(entity);
-
-        //when
-        userService.updateUser(TEST_EMAIL, dto);
-
-        //then
-        assertEquals(newEmail, domain.getEmail());
-        verify(userRepository).save(entity);
-    }
-
-    @Test
-    void updateUser_sameEmail_throwsUserUpdateException() {
-        //given
-        UpdateUserDTO dto = new UpdateUserDTO("email", TEST_EMAIL, null, null, null, null);
-        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-
-        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
-        when(userMapper.entityToDomain(entity)).thenReturn(domain);
-
-        //when & then
-        UserUpdateException exception = assertThrows(
-                UserUpdateException.class,
-                () -> userService.updateUser(TEST_EMAIL, dto)
-        );
-        assertEquals("You cant enter the same email", exception.getMessage());
-    }
-
-    @Test
     void updateUser_validFirstName_updatesFirstNameAndSaves() {
         //given
         String newFirstName = "Alexander";
-        UpdateUserDTO dto = new UpdateUserDTO("firstname", null, newFirstName, null, null, null);
+        UpdateUserDTO dto = new UpdateUserDTO(newFirstName, null);
         User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
         UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
 
@@ -356,7 +307,7 @@ class UserServiceTest {
     @Test
     void updateUser_sameFirstName_throwsUserUpdateException() {
         //given
-        UpdateUserDTO dto = new UpdateUserDTO("firstname", null, TEST_FIRST_NAME, null, null, null);
+        UpdateUserDTO dto = new UpdateUserDTO(TEST_FIRST_NAME, null);
         User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
         UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
 
@@ -375,7 +326,7 @@ class UserServiceTest {
     void updateUser_validLastName_updatesLastNameAndSaves() {
         //given
         String newLastName = "Johnson";
-        UpdateUserDTO dto = new UpdateUserDTO("lastname", null, null, newLastName, null, null);
+        UpdateUserDTO dto = new UpdateUserDTO(null, newLastName);
         User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
         UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
 
@@ -394,7 +345,7 @@ class UserServiceTest {
     @Test
     void updateUser_sameLastName_throwsUserUpdateException() {
         //given
-        UpdateUserDTO dto = new UpdateUserDTO("lastname", null, null, TEST_LAST_NAME, null, null);
+        UpdateUserDTO dto = new UpdateUserDTO(null, TEST_LAST_NAME);
         User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
         UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
 
@@ -410,111 +361,33 @@ class UserServiceTest {
     }
 
     @Test
-    void updateUser_validPassword_updatesPasswordAndSaves() {
+    void updateUser_validBothNames_updatesBothAndSaves() {
         //given
-        String oldPass = "OldPass123!";
-        String newPass = "NewPass456!";
-        String newEncodedPass = "$2a$10$newEncodedHash";
-        UpdateUserDTO dto = new UpdateUserDTO("password", null, null, null, newPass, oldPass);
-
+        String newFirstName = "Alexander";
+        String newLastName = "Johnson";
+        UpdateUserDTO dto = new UpdateUserDTO(newFirstName, newLastName);
         User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
         UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
 
         when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
         when(userMapper.entityToDomain(entity)).thenReturn(domain);
-        when(passwordEncoder.matches(oldPass, domain.getPasswordHash().value())).thenReturn(true);
-        when(passwordEncoder.matches(newPass, domain.getPasswordHash().value())).thenReturn(false);
-        when(passwordEncoder.encode(newPass)).thenReturn(newEncodedPass);
         when(userMapper.domainToEntity(domain)).thenReturn(entity);
 
         //when
         userService.updateUser(TEST_EMAIL, dto);
 
         //then
-        assertEquals(newEncodedPass, domain.getPasswordHash().value());
+        assertAll(
+                () -> assertEquals(newFirstName, domain.getFirstName()),
+                () -> assertEquals(newLastName, domain.getLastName())
+        );
         verify(userRepository).save(entity);
-    }
-
-    @Test
-    void updateUser_wrongOldPassword_throwsUserUpdateException() {
-        //given
-        String wrongOldPass = "WrongPass";
-        UpdateUserDTO dto = new UpdateUserDTO("password", null, null, null, "NewPass456!", wrongOldPass);
-        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-
-        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
-        when(userMapper.entityToDomain(entity)).thenReturn(domain);
-        when(passwordEncoder.matches(wrongOldPass, domain.getPasswordHash().value())).thenReturn(false);
-
-        //when & then
-        UserUpdateException exception = assertThrows(
-                UserUpdateException.class,
-                () -> userService.updateUser(TEST_EMAIL, dto)
-        );
-        assertEquals("Password null or incorrect", exception.getMessage());
-    }
-
-    @Test
-    void updateUser_nullOldPassword_throwsUserUpdateException() {
-        //given
-        UpdateUserDTO dto = new UpdateUserDTO("password", null, null, null, "NewPass456!", null);
-        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-
-        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
-        when(userMapper.entityToDomain(entity)).thenReturn(domain);
-
-        //when & then
-        UserUpdateException exception = assertThrows(
-                UserUpdateException.class,
-                () -> userService.updateUser(TEST_EMAIL, dto)
-        );
-        assertEquals("Password null or incorrect", exception.getMessage());
-    }
-
-    @Test
-    void updateUser_samePassword_throwsRuntimeException() {
-        //given
-        String oldPass = "SamePass123!";
-        UpdateUserDTO dto = new UpdateUserDTO("password", null, null, null, oldPass, oldPass);
-        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-
-        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
-        when(userMapper.entityToDomain(entity)).thenReturn(domain);
-        when(passwordEncoder.matches(oldPass, domain.getPasswordHash().value())).thenReturn(true);
-
-        //when & then
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> userService.updateUser(TEST_EMAIL, dto)
-        );
-        assertEquals("New password cant be the same as old", exception.getCause().getMessage());
-    }
-
-    @Test
-    void updateUser_unknownField_throwsUserUpdateException() {
-        //given
-        UpdateUserDTO dto = new UpdateUserDTO("unsupported_field", null, null, null, null, null);
-        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
-
-        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
-        when(userMapper.entityToDomain(entity)).thenReturn(domain);
-
-        //when & then
-        UserUpdateException exception = assertThrows(
-                UserUpdateException.class,
-                () -> userService.updateUser(TEST_EMAIL, dto)
-        );
-        assertEquals("Unknown field to update", exception.getMessage());
     }
 
     @Test
     void updateUser_repositoryThrowsException_throwsRuntimeException() {
         //given
-        UpdateUserDTO dto = new UpdateUserDTO("email", "new@test.com", null, null, null, null);
+        UpdateUserDTO dto = new UpdateUserDTO("Alexander", "Johnson");
         when(userRepository.findUserByEmail(TEST_EMAIL)).thenThrow(new RuntimeException("DB error"));
 
         //when & then
@@ -632,6 +505,144 @@ class UserServiceTest {
         assertThrows(
                 RuntimeException.class,
                 () -> authService.login(authDto)
+        );
+    }
+
+    // ==========================================
+    // updateUserPassword scenarios
+    // ==========================================
+
+    @Test
+    void updateUserPassword_validCredentials_updatesPasswordAndSaves() {
+        //given
+        String oldPassword = RAW_PASSWORD;
+        String newPassword = "NewValidPassword123!";
+        String newEncodedPassword = "$2a$10$newEncodedHash9999";
+        UpdatePasswordDTO dto = new UpdatePasswordDTO(oldPassword, newPassword);
+
+        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
+        when(passwordEncoder.matches(oldPassword, ENCODED_PASSWORD)).thenReturn(true);
+        when(passwordEncoder.matches(newPassword, ENCODED_PASSWORD)).thenReturn(false);
+        when(passwordEncoder.encode(newPassword)).thenReturn(newEncodedPassword);
+        when(userMapper.entityToDomain(entity)).thenReturn(domain);
+        when(userMapper.domainToEntity(domain)).thenReturn(entity);
+
+        //when
+        authService.updateUserPassword(TEST_EMAIL, dto);
+
+        //then
+        assertEquals(newEncodedPassword, domain.getPasswordHash().value());
+        verify(userRepository).save(entity);
+    }
+
+    @Test
+    void updateUserPassword_wrongOldPassword_throwsUserUpdateException() {
+        //given
+        UpdatePasswordDTO dto = new UpdatePasswordDTO("WrongPassword!", "NewValidPassword123!");
+        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
+        when(passwordEncoder.matches("WrongPassword!", ENCODED_PASSWORD)).thenReturn(false);
+
+        //when & then
+        UserUpdateException exception = assertThrows(
+                UserUpdateException.class,
+                () -> authService.updateUserPassword(TEST_EMAIL, dto)
+        );
+        assertEquals("Old password is incorrect", exception.getMessage());
+    }
+
+    @Test
+    void updateUserPassword_samePassword_throwsUserUpdateException() {
+        //given
+        UpdatePasswordDTO dto = new UpdatePasswordDTO(RAW_PASSWORD, RAW_PASSWORD);
+        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
+        when(passwordEncoder.matches(RAW_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+
+        //when & then
+        UserUpdateException exception = assertThrows(
+                UserUpdateException.class,
+                () -> authService.updateUserPassword(TEST_EMAIL, dto)
+        );
+        assertEquals("New password cant be same as old", exception.getMessage());
+    }
+
+    @Test
+    void updateUserPassword_userNotFound_throwsUserNotFoundException() {
+        //given
+        UpdatePasswordDTO dto = new UpdatePasswordDTO(RAW_PASSWORD, "NewValidPassword123!");
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
+
+        //when & then
+        assertThrows(
+                UserNotFoundException.class,
+                () -> authService.updateUserPassword(TEST_EMAIL, dto)
+        );
+    }
+
+    // ==========================================
+    // updateEmail scenarios
+    // ==========================================
+
+    @Test
+    void updateEmail_validNewEmail_updatesAndSavesAndReturnsJwtToken() {
+        //given
+        String newEmail = "newemail@example.com";
+        UpdateEmailDTO dto = new UpdateEmailDTO(newEmail);
+        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+        String expectedToken = "mocked.new.jwt.token";
+
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
+        when(userMapper.entityToDomain(entity)).thenReturn(domain);
+        when(userRepository.findUserByEmail(newEmail)).thenReturn(Optional.empty());
+        when(userMapper.domainToEntity(domain)).thenReturn(entity);
+        when(jwtService.generateJwtToken(entity)).thenReturn(expectedToken);
+
+        //when
+        String resultToken = authService.updateEmail(TEST_EMAIL, dto);
+
+        //then
+        assertEquals(expectedToken, resultToken);
+        assertEquals(newEmail, domain.getEmail());
+        verify(userRepository).save(entity);
+    }
+
+    @Test
+    void updateEmail_alreadyExists_throwsUserUpdateException() {
+        //given
+        String takenEmail = "taken@example.com";
+        UpdateEmailDTO dto = new UpdateEmailDTO(takenEmail);
+        User entity = buildUserEntity(UUID.randomUUID(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+        UserDomain domain = buildUserDomain(entity.getId(), TEST_EMAIL, TEST_FIRST_NAME, TEST_LAST_NAME, ENCODED_PASSWORD);
+
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.of(entity));
+        when(userMapper.entityToDomain(entity)).thenReturn(domain);
+        when(userRepository.findUserByEmail(takenEmail)).thenReturn(Optional.of(new User()));
+
+        //when & then
+        UserUpdateException exception = assertThrows(
+                UserUpdateException.class,
+                () -> authService.updateEmail(TEST_EMAIL, dto)
+        );
+        assertEquals("Account with email [%s] already exists".formatted(takenEmail), exception.getMessage());
+    }
+
+    @Test
+    void updateEmail_userNotFound_throwsUserNotFoundException() {
+        //given
+        UpdateEmailDTO dto = new UpdateEmailDTO("new@example.com");
+        when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
+
+        //when & then
+        assertThrows(
+                UserNotFoundException.class,
+                () -> authService.updateEmail(TEST_EMAIL, dto)
         );
     }
 

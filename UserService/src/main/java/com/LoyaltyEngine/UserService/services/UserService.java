@@ -1,19 +1,16 @@
 package com.LoyaltyEngine.UserService.services;
 
-import com.LoyaltyEngine.UserService.exceptions.AuthenticationException;
 import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
 import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.models.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
-import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
 import com.LoyaltyEngine.UserService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.UserService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.UserService.services.interfaces.OutboxEventRepository;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
-import com.LoyaltyEngine.UserService.services.security.JwtService;
 import com.github.f4b6a3.uuid.UuidCreator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -140,26 +137,11 @@ public class UserService {
     @Transactional
     public void updateUser(String email, UpdateUserDTO updateUserDTO) {
         try {
-            if (updateUserDTO.fieldToUpdate() == null) {
-                throw new NullPointerException("Field to update is required");
-            }
-
             UserDomain user = userMapper.entityToDomain(userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
 
-            switch (updateUserDTO.fieldToUpdate().toLowerCase().trim()) {
-                case "email" -> user.updateEmail(updateUserDTO.email());
-                case "lastname" -> user.updateLastName(updateUserDTO.lastName());
-                case "firstname" -> user.updateFirstName(updateUserDTO.firstName());
-                case "password" -> {
-                    if (updateUserDTO.oldPassword() == null || updateUserDTO.oldPassword().isBlank() || !passwordEncoder.matches(updateUserDTO.oldPassword(), user.getPasswordHash().value())) throw new UserUpdateException("Password null or incorrect");
-                    if (passwordEncoder.matches(updateUserDTO.newPassword(), user.getPasswordHash().value())) throw new IllegalArgumentException("New password cant be the same as old");
+            if (updateUserDTO.firstName() != null && !updateUserDTO.firstName().isBlank()) user.updateFirstName(updateUserDTO.firstName());
+            if (updateUserDTO.lastName() != null && !updateUserDTO.lastName().isBlank()) user.updateLastName(updateUserDTO.lastName());
 
-                    user.updatePassword(passwordEncoder.encode(updateUserDTO.newPassword()));
-                }
-                default -> throw new UserUpdateException("Unknown field to update");
-            }
-
-            user.updateUpdatedAt(LocalDateTime.now());
             userRepository.save(userMapper.domainToEntity(user));
         } catch (UserNotFoundException | UserUpdateException | NullPointerException e) {
             log.error(e.getMessage());

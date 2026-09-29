@@ -63,6 +63,7 @@ public class UserDomain {
     public void updateEmail(String newEmail) {
         if (newEmail == null) throw new UserUpdateException("New email cant be null");
         if (this.email.equals(newEmail)) throw new UserUpdateException("You cant enter the same email");
+        this.updatedAt = LocalDateTime.now();
 
         this.email = newEmail;
     }
@@ -70,6 +71,7 @@ public class UserDomain {
     public void updateFirstName(String newFirstName) {
         if (newFirstName == null) throw new UserUpdateException("New first name cant be null");
         if (this.firstName.equals(newFirstName)) throw new UserUpdateException("You already have this first name");
+        this.updatedAt = LocalDateTime.now();
 
         this.firstName = newFirstName;
     }
@@ -77,6 +79,7 @@ public class UserDomain {
     public void updateLastName(String newLastName) {
         if (newLastName == null) throw new UserUpdateException("New last name cant be null");
         if (this.lastName.equals(newLastName)) throw new UserUpdateException("You already have this last name");
+        this.updatedAt = LocalDateTime.now();
 
         this.lastName = newLastName;
     }
@@ -84,6 +87,7 @@ public class UserDomain {
     public void updatePassword(String newPasswordHash) {
         HashedPassword newHashedPassword = new HashedPassword(newPasswordHash);
         if (this.passwordHash.equals(newHashedPassword)) throw new UserUpdateException("You already have this password");
+        this.updatedAt = LocalDateTime.now();
 
         this.passwordHash = newHashedPassword;
     }
@@ -91,12 +95,9 @@ public class UserDomain {
     public void updateRole(Role newRole) {
         if (newRole == null) throw new UserUpdateException("New role cant be null");
         if (this.role.equals(newRole)) throw new UserUpdateException("User is already [%s]".formatted(newRole));
+        this.updatedAt = LocalDateTime.now();
 
         this.role = newRole;
-    }
-
-    public void updateUpdatedAt(LocalDateTime newUpdatedAt) {
-        this.updatedAt = newUpdatedAt;
     }
 
     @Override
