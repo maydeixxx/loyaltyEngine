@@ -101,15 +101,13 @@ export const DashboardPage: React.FC = () => {
     }
   }, [userId]);
 
-  // Fetch wallet history
+  // Fetch points history
   const fetchHistory = useCallback(async () => {
     if (!userId) return;
     setLoadingHistory(true);
     try {
       const hist = await walletApi.getHistory(userId);
-      setWalletHistory(
-        hist.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      );
+      setWalletHistory(hist);
     } catch (err) {
       console.warn('Could not fetch wallet history yet', err);
     } finally {
@@ -122,10 +120,8 @@ export const DashboardPage: React.FC = () => {
     if (!userId) return;
     setLoadingTxList(true);
     try {
-      const txs = await transactionApi.getUserTransactions(userId);
-      setTransactions(
-        txs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      );
+      const txList = await transactionApi.getUserTransactions(userId);
+      setTransactions(txList);
     } catch (err) {
       console.warn('Could not fetch transactions yet', err);
     } finally {
@@ -133,13 +129,15 @@ export const DashboardPage: React.FC = () => {
     }
   }, [userId]);
 
-  // Initial load
   useEffect(() => {
-    fetchBalance();
-    fetchHistory();
-    fetchTransactions();
-  }, [fetchBalance, fetchHistory, fetchTransactions]);
+    if (userId) {
+      fetchBalance();
+      fetchHistory();
+      fetchTransactions();
+    }
+  }, [userId, fetchBalance, fetchHistory, fetchTransactions]);
 
+  // Copy User ID
   const copyUserId = () => {
     if (userId) {
       navigator.clipboard.writeText(userId);
@@ -251,42 +249,36 @@ export const DashboardPage: React.FC = () => {
     }
 
     if (isAmountGreaterThanItems) {
-      setTxError(
-        `Сумма транзакции (${finalTransactionAmount.toFixed(2)} ₽) не может превышать стоимость товаров (${totalCartAmount.toFixed(2)} ₽).`
-      );
+      setTxError('Сумма транзакции к списанию не может превышать суммарную стоимость товаров');
       return;
     }
 
     if (isAmountLessThanItems && !useCashback) {
-      setTxError(
-        `Сумма (${finalTransactionAmount.toFixed(2)} ₽) меньше стоимости товаров (${totalCartAmount.toFixed(2)} ₽). Включите списание кэшбэка.`
-      );
+      setTxError('Сумма оплаты меньше суммы товаров. Включите оплату баллами для покрытия разницы.');
       return;
     }
 
-    if (useCashback && balance !== null && amountDifference > balance) {
-      setTxError(
-        `Недостаточно баллов (${balance.toFixed(2)}) для покрытия разницы в ${amountDifference.toFixed(2)} ₽.`
-      );
-      return;
+    if (useCashback && isAmountLessThanItems) {
+      const neededPoints = amountDifference;
+      if (balance !== null && balance < neededPoints) {
+        setTxError(`Недостаточно баллов на балансе! Требуется: ${neededPoints.toFixed(2)} б., доступно: ${balance.toFixed(2)} б.`);
+        return;
+      }
     }
 
+    setSubmittingTx(true);
     setTxError(null);
     setTxSuccess(null);
-    setSubmittingTx(true);
 
     try {
-      const createdTx = await transactionApi.createTransaction(
-        {
-          amount: finalTransactionAmount,
-          items: cartItems,
-          useCashbackBalance: useCashback,
-        },
-        userId || undefined
-      );
+      const response = await transactionApi.createTransaction({
+        amount: finalTransactionAmount,
+        items: cartItems,
+        useCashbackBalance: useCashback,
+      });
 
       setTxSuccess(
-        `Чек #${createdTx.id.substring(0, 8)} на сумму ${finalTransactionAmount.toFixed(2)} ₽ успешно создан!`
+        `Транзакция #${response.id ? response.id.substring(0, 8) : 'создана'} на сумму ${finalTransactionAmount.toFixed(2)} ₽ успешно проведена!`
       );
 
       setTimeout(() => {
@@ -304,41 +296,45 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-3 sm:py-6 px-3 sm:px-6 lg:px-8 pb-24 md:pb-12 max-w-7xl mx-auto overflow-x-hidden">
-      <div className="space-y-4 sm:space-y-6">
-        {/* Mobile-Friendly Greeting Card */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="min-h-screen bg-[#f5f5f7] py-4 sm:py-8 px-4 sm:px-6 lg:px-8 pb-28 md:pb-14 max-w-7xl mx-auto overflow-x-hidden">
+      <div className="space-y-6">
+        {/* Apple-style Greeting Card */}
+        <div className="bg-white p-5 sm:p-7 rounded-3xl border border-black/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Привет, {user?.firstName || 'друг'}!</span>
-              <span className="text-lg">👋</span>
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#1d1d1f] tracking-tight flex items-center gap-2">
+              <span>Привет, {user?.firstName || 'друг'}</span>
+              <span className="text-xl">👋</span>
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Программа лояльности и кэшбэка LoyaltyEngine
+            <p className="text-xs text-[#86868b] mt-0.5">
+              Программа лояльности и привилегий LoyaltyEngine
             </p>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end space-x-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
-            <span className="text-slate-400 font-medium">ID:</span>
-            <code className="text-slate-700 font-mono text-[11px] font-semibold truncate max-w-[150px] sm:max-w-none">
+          <div className="flex items-center justify-between sm:justify-end space-x-2 bg-[#f5f5f7] px-3.5 py-1.5 rounded-full border border-black/[0.04] text-xs">
+            <span className="text-[#86868b] font-medium">ID:</span>
+            <code className="text-[#1d1d1f] font-mono text-[11px] font-semibold truncate max-w-[150px] sm:max-w-none">
               {userId || '...'}
             </code>
             <button
               onClick={copyUserId}
-              title="Скопировать User ID"
-              className="p-1 hover:text-indigo-600 rounded transition flex-shrink-0"
+              title="Скопировать ID"
+              className="p-1 text-[#86868b] hover:text-[#0071e3] transition flex-shrink-0"
             >
-              {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+              {copiedId ? <Check className="w-3.5 h-3.5 text-[#34c759]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
 
-        {/* Balance Card (Apple Wallet / Tinkoff card style) */}
-        <div className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-indigo-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-white shadow-lg shadow-indigo-950/15 relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-indigo-200 text-xs font-medium">
-              <Wallet className="w-4 h-4" />
-              <span>Баланс программы лояльности</span>
+        {/* Balance Card: Apple Card / Apple Wallet Aesthetic */}
+        <div className="bg-gradient-to-br from-[#1d1d1f] via-[#151516] to-[#0a0a0c] rounded-3xl p-6 sm:p-8 text-white border border-white/[0.08] shadow-[0_16px_40px_rgba(0,0,0,0.18)] relative overflow-hidden">
+          {/* Subtle Titanium & Iridescent Glow */}
+          <div className="absolute -top-24 -right-24 w-80 h-80 bg-gradient-to-br from-blue-500/20 via-purple-500/15 to-transparent rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-gradient-to-tr from-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-white/60 text-xs font-medium">
+              <Wallet className="w-4 h-4 text-white/80" />
+              <span>Баланс привилегий</span>
             </div>
             <button
               onClick={() => {
@@ -346,75 +342,75 @@ export const DashboardPage: React.FC = () => {
                 fetchHistory();
               }}
               title="Обновить баланс"
-              className="p-1.5 hover:bg-white/10 rounded-lg text-indigo-200 hover:text-white transition active:scale-95"
+              className="p-1.5 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-all active:scale-95"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingBalance ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
-          <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl sm:text-5xl font-extrabold tracking-tight font-mono">
+          <div className="relative z-10 mt-5 flex items-baseline space-x-3">
+            <span className="text-4xl sm:text-6xl font-semibold tracking-tight text-white">
               {balance !== null ? balance.toLocaleString('ru-RU', { minimumFractionDigits: 2 }) : '0.00'}
             </span>
-            <span className="text-lg sm:text-2xl font-semibold text-indigo-300">баллов</span>
+            <span className="text-lg sm:text-2xl font-normal text-white/50">баллов</span>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-indigo-700/50 flex items-center justify-between text-[11px] text-indigo-200">
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+          <div className="relative z-10 mt-6 pt-5 border-t border-white/[0.08] flex items-center justify-between text-xs text-white/70">
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 bg-[#34c759] rounded-full animate-pulse shadow-sm shadow-emerald-400"></span>
               <span>1 балл = 1 ₽</span>
             </div>
-            <div className="flex items-center space-x-1 bg-indigo-800/80 px-2 py-0.5 rounded-md">
-              <Sparkles className="w-3 h-3 text-amber-300" />
+            <div className="flex items-center space-x-1.5 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-white/90 text-[11px] font-medium border border-white/[0.06]">
+              <Sparkles className="w-3 h-3 text-[#ff9500]" />
               <span>Кэшбэк до 20%</span>
             </div>
           </div>
         </div>
 
         {/* TRANSACTION CONFIGURATOR */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4 sm:space-y-6">
-          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl flex-shrink-0">
+        <div className="bg-white rounded-3xl p-5 sm:p-7 border border-black/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.03)] space-y-6">
+          <div className="flex items-center space-x-3 pb-4 border-b border-black/[0.06]">
+            <div className="p-2 bg-[#f5f5f7] text-[#0071e3] rounded-2xl flex-shrink-0">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900">Конструктор покупки</h2>
-              <p className="text-[11px] text-slate-500">
-                Выбирайте товары из каталога и настраивайте чек
+              <h2 className="text-base sm:text-lg font-semibold text-[#1d1d1f] tracking-tight">Конструктор покупки</h2>
+              <p className="text-xs text-[#86868b]">
+                Выбирайте товары из каталога и настраивайте позиции чека
               </p>
             </div>
           </div>
 
           {txSuccess && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs flex items-start space-x-2.5">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600 mt-0.5" />
-              <div>{txSuccess}</div>
+            <div className="p-3.5 rounded-2xl bg-[#34c759]/10 border border-[#34c759]/20 text-[#34c759] text-xs flex items-start space-x-2.5">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="font-medium">{txSuccess}</div>
             </div>
           )}
 
           {txError && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-800 text-xs flex items-start space-x-2.5">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5" />
-              <div>{txError}</div>
+            <div className="p-3.5 rounded-2xl bg-[#ff3b30]/10 border border-[#ff3b30]/20 text-[#ff3b30] text-xs flex items-start space-x-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="font-medium">{txError}</div>
             </div>
           )}
 
           {/* STEP 1: Add Item */}
-          <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/80 space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center space-x-1.5">
-              <ShoppingBag className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="bg-[#f5f5f7] p-4 sm:p-5 rounded-2xl border border-black/[0.04] space-y-3.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#1d1d1f] flex items-center space-x-1.5">
+              <ShoppingBag className="w-3.5 h-3.5 text-[#0071e3]" />
               <span>1. Добавление товара в чек</span>
             </span>
 
             <form onSubmit={handleAddItemToCart} className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-[#86868b] mb-1">
                   Товар из каталога:
                 </label>
                 <select
                   value={selectedCatalogId}
                   onChange={handleCatalogChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                  className="w-full px-3.5 py-2.5 bg-white border border-black/[0.08] rounded-xl text-xs font-medium text-[#1d1d1f] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 focus:outline-none transition-all duration-200"
                 >
                   <optgroup label="☕ Кафе и рестораны">
                     <option value="coffee">Капучино Grande (320 ₽)</option>
@@ -441,25 +437,25 @@ export const DashboardPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Название:</label>
+                  <label className="block text-[10px] font-medium text-[#86868b] mb-1">Название:</label>
                   <input
                     type="text"
                     required
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-white border border-black/[0.08] rounded-xl text-xs text-[#1d1d1f] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 focus:outline-none transition-all duration-200"
                     placeholder="Название товара"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Категория:</label>
+                  <label className="block text-[10px] font-medium text-[#86868b] mb-1">Категория:</label>
                   <select
                     value={itemCategory}
                     onChange={(e) => setItemCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-white border border-black/[0.08] rounded-xl text-xs text-[#1d1d1f] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 focus:outline-none transition-all duration-200"
                   >
                     <option value="cafe">cafe</option>
                     <option value="groceries">groceries</option>
@@ -473,7 +469,7 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               <div className="flex items-center space-x-2 pt-1">
-                <div className="relative flex-1 sm:w-40 sm:flex-none">
+                <div className="relative flex-1 sm:w-44 sm:flex-none">
                   <input
                     type="number"
                     step="0.01"
@@ -481,15 +477,15 @@ export const DashboardPage: React.FC = () => {
                     required
                     value={itemPrice}
                     onChange={(e) => setItemPrice(e.target.value)}
-                    className="w-full pl-3 pr-7 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full pl-3.5 pr-7 py-2 bg-white border border-black/[0.08] rounded-xl text-xs font-semibold text-[#1d1d1f] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 focus:outline-none transition-all duration-200"
                     placeholder="Цена"
                   />
-                  <span className="absolute right-2.5 top-2 text-xs text-slate-400 font-bold">₽</span>
+                  <span className="absolute right-3 top-2 text-xs text-[#86868b] font-medium">₽</span>
                 </div>
 
                 <button
                   type="submit"
-                  className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-semibold rounded-xl flex items-center justify-center space-x-1.5 transition shadow-xs"
+                  className="flex-1 sm:flex-none px-5 py-2 bg-[#0071e3] hover:bg-[#0077ed] active:scale-95 text-white text-xs font-medium rounded-full flex items-center justify-center space-x-1.5 transition-all duration-200 shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>В чек</span>
@@ -498,27 +494,27 @@ export const DashboardPage: React.FC = () => {
             </form>
           </div>
 
-          {/* STEP 2: Items in Cart (Mobile-friendly list) */}
-          <div className="border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden shadow-xs">
-            <div className="bg-slate-100/80 px-3 sm:px-4 py-2 text-xs font-semibold text-slate-600 flex justify-between items-center">
+          {/* STEP 2: Items in Cart (Grouped iOS List) */}
+          <div className="border border-black/[0.06] rounded-2xl overflow-hidden bg-white shadow-xs">
+            <div className="bg-[#f5f5f7] px-4 py-2.5 text-xs font-medium text-[#1d1d1f] flex justify-between items-center border-b border-black/[0.04]">
               <span>Товары в чеке ({cartItems.length}):</span>
-              <span className="text-[11px] text-slate-400">Цену можно изменить</span>
+              <span className="text-[11px] text-[#86868b]">Цену можно изменить</span>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-black/[0.04]">
               {cartItems.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
+                <div className="p-6 text-center text-xs text-[#86868b]">
                   Чек пуст. Добавьте товар из списка выше.
                 </div>
               ) : (
                 cartItems.map((item, idx) => (
-                  <div key={idx} className="p-3 sm:px-4 sm:py-3 hover:bg-slate-50/70 transition flex items-center justify-between gap-3">
+                  <div key={idx} className="p-3 sm:px-4 sm:py-3 hover:bg-black/[0.01] transition flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-900 text-xs truncate">
+                      <div className="font-medium text-[#1d1d1f] text-xs truncate">
                         {item.name}
                       </div>
                       <div className="flex items-center space-x-1.5 mt-0.5">
-                        <span className="font-mono text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                        <span className="font-mono text-[9px] bg-[#f5f5f7] text-[#86868b] px-2 py-0.5 rounded-full border border-black/[0.04]">
                           {item.category}
                         </span>
                       </div>
@@ -532,15 +528,15 @@ export const DashboardPage: React.FC = () => {
                           min="0.01"
                           value={item.price}
                           onChange={(e) => handleUpdateItemPrice(idx, e.target.value)}
-                          className="w-20 sm:w-24 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-right font-bold text-xs text-slate-900 focus:bg-white focus:outline-none"
+                          className="w-20 sm:w-24 px-2 py-1 bg-[#f5f5f7] border border-black/[0.08] rounded-lg text-right font-semibold text-xs text-[#1d1d1f] focus:bg-white focus:border-[#0071e3] focus:outline-none"
                         />
                       </div>
-                      <span className="text-xs font-semibold text-slate-500">₽</span>
+                      <span className="text-xs text-[#86868b] font-medium">₽</span>
 
                       <button
                         onClick={() => removeItem(idx)}
                         title="Удалить"
-                        className="p-1.5 text-slate-300 hover:text-rose-600 transition"
+                        className="p-1.5 text-[#86868b] hover:text-[#ff3b30] transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -551,25 +547,25 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {cartItems.length > 0 && (
-              <div className="bg-slate-50 px-3 sm:px-4 py-2.5 border-t border-slate-200 flex justify-between items-center text-xs">
-                <span className="font-medium text-slate-600">Сумма товаров:</span>
-                <span className="font-bold text-slate-900 text-sm font-mono">{totalCartAmount.toFixed(2)} ₽</span>
+              <div className="bg-[#f5f5f7] px-4 py-2.5 border-t border-black/[0.04] flex justify-between items-center text-xs">
+                <span className="font-medium text-[#86868b]">Сумма товаров:</span>
+                <span className="font-semibold text-[#1d1d1f] text-sm font-sans">{totalCartAmount.toFixed(2)} ₽</span>
               </div>
             )}
           </div>
 
           {/* STEP 3: Customize Transaction Amount & Payment */}
           {cartItems.length > 0 && (
-            <div className="bg-indigo-50/40 p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-indigo-100/80 space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-950 flex items-center space-x-1.5">
-                  <Calculator className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="bg-[#f5f5f7] p-5 sm:p-6 rounded-2xl border border-black/[0.06] space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#1d1d1f] flex items-center space-x-1.5">
+                  <Calculator className="w-3.5 h-3.5 text-[#0071e3]" />
                   <span>2. Сумма к списанию</span>
                 </span>
                 <button
                   type="button"
                   onClick={handleSyncAmountWithItems}
-                  className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 transition"
+                  className="text-[11px] font-medium text-[#0071e3] hover:underline flex items-center space-x-1 transition"
                 >
                   <RefreshCw className="w-2.5 h-2.5" />
                   <span>Рассчитать по товарам</span>
@@ -577,7 +573,7 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-800 mb-1">
+                <label className="block text-[11px] font-medium text-[#1d1d1f] mb-1.5">
                   Сумма транзакции к оплате (₽):
                 </label>
                 <div className="relative">
@@ -587,18 +583,18 @@ export const DashboardPage: React.FC = () => {
                     min="0.01"
                     value={customAmount}
                     onChange={handleCustomAmountChange}
-                    className="w-full pl-3.5 pr-8 py-2.5 bg-white border-2 border-indigo-200 focus:border-indigo-600 rounded-xl text-base sm:text-lg font-bold text-slate-900 focus:outline-none transition font-mono"
+                    className="w-full pl-4 pr-9 py-3 bg-white border border-black/[0.12] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 rounded-2xl text-lg sm:text-xl font-semibold text-[#1d1d1f] focus:outline-none transition-all duration-200"
                     placeholder="0.00"
                   />
-                  <span className="absolute right-3 top-2.5 text-slate-400 font-bold">₽</span>
+                  <span className="absolute right-3.5 top-3 text-[#86868b] font-medium text-base">₽</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1">
+                <div className="flex items-center justify-between text-[11px] text-[#86868b] mt-1.5">
                   <span>
                     {isAutoAmount ? (
-                      <span className="text-emerald-600 font-medium">● По сумме товаров</span>
+                      <span className="text-[#34c759] font-medium">● По сумме товаров</span>
                     ) : (
-                      <span className="text-amber-600 font-medium">● Ручной ввод</span>
+                      <span className="text-[#ff9500] font-medium">● Ручной ввод</span>
                     )}
                   </span>
                   <span>Товары: {totalCartAmount.toFixed(2)} ₽</span>
@@ -606,67 +602,67 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               {/* Cashback toggle */}
-              <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-                <label className="flex items-start space-x-2.5 cursor-pointer select-none">
+              <div className="bg-white p-3.5 rounded-2xl border border-black/[0.06] space-y-2">
+                <label className="flex items-start space-x-3 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={useCashback}
                     onChange={(e) => setUseCashback(e.target.checked)}
-                    className="w-4 h-4 mt-0.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    className="w-4 h-4 mt-0.5 text-[#0071e3] rounded border-black/[0.15] focus:ring-[#0071e3]"
                   />
                   <div>
-                    <span className="text-xs font-bold text-slate-900 block leading-tight">
+                    <span className="text-xs font-semibold text-[#1d1d1f] block leading-tight">
                       Оплатить баллами кэшбэка
                     </span>
-                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                    <span className="text-[10px] text-[#86868b] block mt-0.5">
                       Списать баллы для покрытия разницы
                     </span>
                   </div>
                 </label>
 
                 {balance !== null && (
-                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[10px]">
-                    <span className="text-slate-500">Доступный баланс:</span>
-                    <span className="font-bold text-indigo-600 font-mono">{balance.toFixed(2)} б.</span>
+                  <div className="pt-2 border-t border-black/[0.04] flex justify-between items-center text-[10px]">
+                    <span className="text-[#86868b]">Доступный баланс:</span>
+                    <span className="font-semibold text-[#0071e3]">{balance.toFixed(2)} б.</span>
                   </div>
                 )}
               </div>
 
               {/* Warnings / Calculations */}
-              <div className="text-xs space-y-1.5 p-3 rounded-xl bg-white/80 border border-slate-200">
-                <div className="flex justify-between text-slate-600">
+              <div className="text-xs space-y-1.5 p-3.5 rounded-2xl bg-white border border-black/[0.06]">
+                <div className="flex justify-between text-[#86868b]">
                   <span>К оплате деньгами:</span>
-                  <span className="font-bold text-indigo-600 font-mono">{finalTransactionAmount.toFixed(2)} ₽</span>
+                  <span className="font-semibold text-[#1d1d1f]">{finalTransactionAmount.toFixed(2)} ₽</span>
                 </div>
 
                 {useCashback && isAmountLessThanItems && (
-                  <div className="flex justify-between text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
+                  <div className="flex justify-between text-[#34c759] bg-[#34c759]/10 px-2.5 py-1 rounded-xl">
                     <span>Списание баллов:</span>
-                    <span className="font-bold font-mono">-{amountDifference.toFixed(2)} б.</span>
+                    <span className="font-semibold">-{amountDifference.toFixed(2)} б.</span>
                   </div>
                 )}
 
                 {isAmountGreaterThanItems && (
-                  <div className="flex items-center space-x-1.5 text-rose-700 text-[10px]">
+                  <div className="flex items-center space-x-1.5 text-[#ff3b30] text-[10px]">
                     <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>Сумма транзакции не может быть больше суммы товаров.</span>
                   </div>
                 )}
 
                 {isAmountLessThanItems && !useCashback && (
-                  <div className="flex items-center space-x-1.5 text-amber-700 text-[10px]">
+                  <div className="flex items-center space-x-1.5 text-[#ff9500] text-[10px]">
                     <Info className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>Включите списание кэшбэка выше, чтобы покрыть разницу.</span>
                   </div>
                 )}
               </div>
 
-              {/* Big CTA button */}
+              {/* Apple Pay / Big CTA button */}
               <button
                 type="button"
                 onClick={handleCreateTransaction}
                 disabled={submittingTx || isAmountGreaterThanItems || (isAmountLessThanItems && !useCashback)}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md shadow-indigo-200 disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="w-full py-3.5 bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] text-white font-medium text-sm rounded-full transition-all duration-200 shadow-sm disabled:opacity-50 flex items-center justify-center space-x-2"
               >
                 {submittingTx ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -682,19 +678,19 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Mobile Tabs for History */}
-        <div className="md:hidden flex bg-slate-200/70 p-1 rounded-xl">
+        <div className="md:hidden flex bg-black/[0.05] p-1 rounded-full border border-black/[0.04]">
           <button
             onClick={() => setHistoryTab('points')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${
-              historyTab === 'points' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+            className={`flex-1 py-1.5 text-xs font-medium rounded-full transition-all duration-200 ${
+              historyTab === 'points' ? 'bg-white text-[#1d1d1f] shadow-sm font-semibold' : 'text-[#86868b]'
             }`}
           >
-            Баллы кошелька
+            Баллы
           </button>
           <button
             onClick={() => setHistoryTab('receipts')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${
-              historyTab === 'receipts' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+            className={`flex-1 py-1.5 text-xs font-medium rounded-full transition-all duration-200 ${
+              historyTab === 'receipts' ? 'bg-white text-[#1d1d1f] shadow-sm font-semibold' : 'text-[#86868b]'
             }`}
           >
             Чеки покупок
@@ -702,48 +698,48 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* History Tables Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Wallet Points History */}
-          <div className={`${historyTab === 'points' ? 'block' : 'hidden md:block'} bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+          <div className={`${historyTab === 'points' ? 'block' : 'hidden md:block'} bg-white rounded-3xl p-5 sm:p-7 border border-black/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.03)]`}>
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/[0.06]">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 bg-[#f5f5f7] text-[#0071e3] rounded-xl">
                   <Coins className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base">Баллы кошелька</h3>
+                <h3 className="font-semibold text-[#1d1d1f] text-sm sm:text-base">Баллы кошелька</h3>
               </div>
-              <button onClick={fetchHistory} className="p-1 text-slate-400 hover:text-slate-600">
+              <button onClick={fetchHistory} className="p-1 text-[#86868b] hover:text-[#1d1d1f] transition">
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
               </button>
             </div>
 
-            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-black/[0.04] max-h-80 overflow-y-auto">
               {walletHistory.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">Операций пока нет</div>
+                <div className="py-8 text-center text-xs text-[#86868b]">Операций пока нет</div>
               ) : (
                 walletHistory.map((item) => (
-                  <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-2.5 min-w-0">
+                  <div key={item.id} className="py-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-3 min-w-0">
                       <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          item.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                        className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          item.type === 'CREDIT' ? 'bg-[#34c759]/10 text-[#34c759]' : 'bg-[#ff3b30]/10 text-[#ff3b30]'
                         }`}
                       >
                         {item.type === 'CREDIT' ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-medium text-slate-800 truncate text-[11px] sm:text-xs">
+                        <div className="font-medium text-[#1d1d1f] truncate text-[11px] sm:text-xs">
                           {item.description || (item.type === 'CREDIT' ? 'Кэшбэк' : 'Списание')}
                         </div>
-                        <div className="text-[9px] text-slate-400">
+                        <div className="text-[10px] text-[#86868b]">
                           {new Date(item.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} • {new Date(item.createdAt).toLocaleDateString('ru-RU')}
                         </div>
                       </div>
                     </div>
 
                     <div
-                      className={`font-bold font-mono text-xs sm:text-sm flex-shrink-0 pl-2 ${
-                        item.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'
+                      className={`font-semibold text-xs sm:text-sm flex-shrink-0 pl-2 ${
+                        item.type === 'CREDIT' ? 'text-[#34c759]' : 'text-[#ff3b30]'
                       }`}
                     >
                       {item.type === 'CREDIT' ? '+' : '-'}
@@ -756,59 +752,59 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Purchases / Receipts History */}
-          <div className={`${historyTab === 'receipts' ? 'block' : 'hidden md:block'} bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+          <div className={`${historyTab === 'receipts' ? 'block' : 'hidden md:block'} bg-white rounded-3xl p-5 sm:p-7 border border-black/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.03)]`}>
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/[0.06]">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 bg-[#f5f5f7] text-[#0071e3] rounded-xl">
                   <Receipt className="w-4 h-4" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base">Чеки покупок</h3>
+                <h3 className="font-semibold text-[#1d1d1f] text-sm sm:text-base">Чеки покупок</h3>
               </div>
-              <button onClick={fetchTransactions} className="p-1 text-slate-400 hover:text-slate-600">
+              <button onClick={fetchTransactions} className="p-1 text-[#86868b] hover:text-[#1d1d1f] transition">
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingTxList ? 'animate-spin' : ''}`} />
               </button>
             </div>
 
-            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-black/[0.04] max-h-80 overflow-y-auto">
               {transactions.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">Чеков пока нет</div>
+                <div className="py-8 text-center text-xs text-[#86868b]">Чеков пока нет</div>
               ) : (
                 transactions.map((tx) => (
                   <div
                     key={tx.id}
                     onClick={() => setSelectedTx(tx)}
-                    className="py-2.5 px-2 -mx-2 rounded-xl hover:bg-slate-50 cursor-pointer flex items-center justify-between text-xs transition"
+                    className="py-3 px-2 -mx-2 rounded-2xl hover:bg-black/[0.02] cursor-pointer flex items-center justify-between text-xs transition-colors duration-150"
                   >
-                    <div className="flex items-center space-x-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 flex-shrink-0">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f] flex-shrink-0">
                         <Receipt className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-medium text-slate-800 text-[11px] sm:text-xs truncate">
+                        <div className="font-medium text-[#1d1d1f] text-[11px] sm:text-xs truncate">
                           Чек #{tx.id.substring(0, 8)} ({tx.items?.length || 0} поз.)
                         </div>
-                        <div className="text-[9px] text-slate-400">
+                        <div className="text-[10px] text-[#86868b]">
                           {new Date(tx.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} • {new Date(tx.createdAt).toLocaleDateString('ru-RU')}
                         </div>
                       </div>
                     </div>
 
-                    <div className="text-right flex items-center space-x-1.5 flex-shrink-0">
+                    <div className="text-right flex items-center space-x-2 flex-shrink-0">
                       <div>
-                        <div className="font-bold text-slate-900 text-xs font-mono">{Number(tx.amount).toFixed(2)} ₽</div>
+                        <div className="font-semibold text-[#1d1d1f] text-xs font-sans">{Number(tx.amount).toFixed(2)} ₽</div>
                         <span
-                          className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-semibold ${
+                          className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-medium ${
                             tx.status === 'HANDLED'
-                              ? 'bg-emerald-50 text-emerald-700'
+                              ? 'bg-[#34c759]/10 text-[#34c759]'
                               : tx.status === 'FAILED'
-                              ? 'bg-rose-50 text-rose-700'
-                              : 'bg-amber-50 text-amber-700'
+                              ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                              : 'bg-[#ff9500]/10 text-[#ff9500]'
                           }`}
                         >
                           {tx.status}
                         </span>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                      <ChevronRight className="w-3.5 h-3.5 text-[#86868b]" />
                     </div>
                   </div>
                 ))
@@ -817,60 +813,60 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Receipt Modal */}
+        {/* Receipt Modal (Apple Sheet style) */}
         {selectedTx && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 z-50">
-            <div className="bg-white max-w-sm w-full rounded-2xl p-5 shadow-xl border border-slate-100">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity">
+            <div className="bg-white max-w-sm w-full rounded-3xl p-6 shadow-2xl border border-black/[0.08] animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
                 <div className="flex items-center space-x-2">
-                  <Receipt className="w-4 h-4 text-indigo-600" />
-                  <h3 className="font-bold text-slate-900 text-sm">Детали чека</h3>
+                  <Receipt className="w-4 h-4 text-[#0071e3]" />
+                  <h3 className="font-semibold text-[#1d1d1f] text-sm">Детали чека</h3>
                 </div>
                 <button
                   onClick={() => setSelectedTx(null)}
-                  className="text-slate-400 hover:text-slate-600 p-1 text-sm font-bold"
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f] text-xs font-bold transition"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="mt-3 space-y-3 text-xs">
-                <div className="bg-slate-50 p-2.5 rounded-xl space-y-1 font-mono text-[10px]">
-                  <div className="flex justify-between text-slate-500">
+              <div className="mt-4 space-y-3.5 text-xs">
+                <div className="bg-[#f5f5f7] p-3 rounded-2xl space-y-1 font-mono text-[10px] border border-black/[0.04]">
+                  <div className="flex justify-between text-[#86868b]">
                     <span>ID:</span>
-                    <span className="text-slate-800 font-semibold">{selectedTx.id.substring(0, 16)}...</span>
+                    <span className="text-[#1d1d1f] font-medium">{selectedTx.id.substring(0, 16)}...</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between text-[#86868b]">
                     <span>Статус:</span>
-                    <span className="font-semibold text-indigo-600">{selectedTx.status}</span>
+                    <span className="font-medium text-[#0071e3]">{selectedTx.status}</span>
                   </div>
                 </div>
 
                 <div>
-                  <span className="font-semibold text-slate-700 block mb-1 text-[11px]">Позиции:</span>
-                  <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+                  <span className="font-medium text-[#86868b] block mb-1.5 text-[11px]">Позиции:</span>
+                  <div className="divide-y divide-black/[0.04] border border-black/[0.06] rounded-2xl overflow-hidden max-h-40 overflow-y-auto">
                     {selectedTx.items?.map((item, idx) => (
-                      <div key={idx} className="p-2 flex justify-between items-center text-[11px]">
+                      <div key={idx} className="p-2.5 flex justify-between items-center text-[11px]">
                         <div>
-                          <div className="font-medium text-slate-800">{item.name}</div>
-                          <div className="text-[9px] text-slate-400 font-mono">{item.category}</div>
+                          <div className="font-medium text-[#1d1d1f]">{item.name}</div>
+                          <div className="text-[9px] text-[#86868b] font-mono">{item.category}</div>
                         </div>
-                        <div className="font-semibold text-slate-900">{Number(item.price).toFixed(2)} ₽</div>
+                        <div className="font-semibold text-[#1d1d1f]">{Number(item.price).toFixed(2)} ₽</div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex justify-between items-baseline font-bold text-slate-900">
+                <div className="pt-3 border-t border-black/[0.06] flex justify-between items-baseline font-semibold text-[#1d1d1f]">
                   <span>Итого к оплате:</span>
-                  <span className="text-sm text-indigo-600 font-mono">{Number(selectedTx.amount).toFixed(2)} ₽</span>
+                  <span className="text-base text-[#0071e3]">{Number(selectedTx.amount).toFixed(2)} ₽</span>
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-5">
                 <button
                   onClick={() => setSelectedTx(null)}
-                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition"
+                  className="w-full py-2.5 bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium rounded-full text-xs transition-all duration-200"
                 >
                   Закрыть
                 </button>
