@@ -2,6 +2,7 @@ package com.LoyaltyEngine.RuleEngineService.api;
 
 import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackRuleNotFoundException;
 import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackRuleValidationException;
+import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackUpdateException;
 import com.LoyaltyEngine.RuleEngineService.models.dto.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CashbackRuleValidationException.class)
     public ResponseEntity<ErrorResponse> handlerCashbackRuleValidationException(CashbackRuleValidationException e, WebRequest request) {
         ErrorResponse response = buildErrorResponse("Not valid data", e.getMessage(), 400, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @ExceptionHandler(CashbackUpdateException.class)
+    public ResponseEntity<ErrorResponse> handlerCashbackUpdateException(Exception e, WebRequest request) {
+        ErrorResponse response = buildErrorResponse("Error updating cashback rule", e.getMessage(), 400, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
