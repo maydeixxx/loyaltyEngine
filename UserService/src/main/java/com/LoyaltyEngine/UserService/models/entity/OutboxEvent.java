@@ -14,6 +14,7 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(name = "outbox_events")
 public class OutboxEvent {
     @Id
     @Column(nullable = false, unique = true)

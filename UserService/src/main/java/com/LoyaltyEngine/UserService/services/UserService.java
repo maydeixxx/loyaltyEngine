@@ -66,7 +66,7 @@ public class UserService {
                     .payload(newUser.getId().value().toString())
                     .build();
 
-            outboxEventRepository.save(event);
+            outboxEventRepository.saveAndFlush(event);
 
             registry.counter("loyalty.users.registered", "status", "successful").increment();
             span.tag("status", "SUCCESSFUL");

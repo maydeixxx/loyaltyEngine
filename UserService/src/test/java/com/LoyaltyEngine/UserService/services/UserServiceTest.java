@@ -17,6 +17,10 @@ import com.LoyaltyEngine.UserService.models.enums.Role;
 import com.LoyaltyEngine.UserService.services.interfaces.OutboxEventRepository;
 import com.LoyaltyEngine.UserService.services.interfaces.UserRepository;
 import com.LoyaltyEngine.UserService.services.security.JwtService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +28,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -38,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -54,6 +60,12 @@ class UserServiceTest {
     private JwtService jwtService;
     @Mock
     private BCryptPasswordEncoder passwordEncoder;
+    @Spy
+    private MeterRegistry registry = new SimpleMeterRegistry();
+    @Mock
+    private Tracer tracer;
+    @Mock
+    private ScopedSpan scopedSpan;
 
     @InjectMocks
     private UserService userService;
@@ -74,6 +86,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(userService, "userCreatedTopic", TOPIC_NAME);
+        lenient().when(tracer.startScopedSpan(any(String.class))).thenReturn(scopedSpan);
     }
 
     // ==========================================
@@ -95,7 +108,7 @@ class UserServiceTest {
 
         //then
         verify(userRepository).saveAndFlush(entityToSave);
-        verify(outboxEventRepository).save(outboxEventCaptor.capture());
+        verify(outboxEventRepository).saveAndFlush(outboxEventCaptor.capture());
 
         OutboxEvent capturedEvent = outboxEventCaptor.getValue();
         assertAll(

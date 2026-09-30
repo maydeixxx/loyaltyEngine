@@ -26,7 +26,7 @@ public class OutboxEventPublisher {
 
     @Scheduled(fixedDelay = 5000)
     public void sendPendingEvents() {
-        List<OutboxEvent> events = outboxEventRepository.findByStatusOrderByCreatedAtAsc(OutboxStatus.NEW);
+        List<OutboxEvent> events = outboxEventRepository.findNewOutBoxEvents();
         if (events.isEmpty()) {
             return;
         }

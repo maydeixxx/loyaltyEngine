@@ -28,7 +28,7 @@ public class OutboxEventPublisher {
     @Scheduled(fixedDelay = 5000)
     public void handleOutboxEvents() {
         try {
-            List<OutboxEvent> outBoxEvents = outboxEventRepository.findOutBoxEvents(OutboxStatus.NEW);
+            List<OutboxEvent> outBoxEvents = outboxEventRepository.findNewOutBoxEvents();
 
             for (OutboxEvent event : outBoxEvents) {
                 try {

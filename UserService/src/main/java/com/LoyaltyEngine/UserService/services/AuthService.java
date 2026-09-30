@@ -61,7 +61,7 @@ public class AuthService {
             domain.updatePassword(passwordEncoder.encode(updatePasswordDTO.newPassword()));
 
             userRepository.save(userMapper.domainToEntity(domain));
-        } catch (UserUpdateException e) {
+        } catch (UserNotFoundException | UserUpdateException e) {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error updating password: {}", e.getMessage());
@@ -81,7 +81,7 @@ public class AuthService {
             userRepository.save(user);
 
             return jwtService.generateJwtToken(user);
-        } catch (UserUpdateException e) {
+        } catch (UserNotFoundException | UserUpdateException e) {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error updating email: {}", e.getMessage());

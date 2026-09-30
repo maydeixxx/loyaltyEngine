@@ -27,7 +27,7 @@ public class RuleEngineController {
     }
 
     @GetMapping()
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getAllRules() {
         return ResponseEntity.ok().body(ruleEngineService.getAllRules());
     }

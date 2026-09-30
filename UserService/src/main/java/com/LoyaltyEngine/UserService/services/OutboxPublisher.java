@@ -5,7 +5,6 @@ import com.LoyaltyEngine.UserService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.UserService.services.interfaces.OutboxEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -28,7 +27,7 @@ public class OutboxPublisher {
     @Scheduled(fixedDelay = 5L, timeUnit = TimeUnit.SECONDS)
     public void handleOutboxEvents() {
         try {
-            List<OutboxEvent> outboxEvents = outboxEventRepository.findOutboxEvents(OutboxStatus.NEW, PageRequest.of(0, 50));
+            List<OutboxEvent> outboxEvents = outboxEventRepository.findNewOutBoxEvents();
 
             if (outboxEvents.isEmpty()) return;
 
@@ -36,7 +35,7 @@ public class OutboxPublisher {
                 try {
                     kafkaTemplate.send(event.getEventType(), event.getAggregateId(), event.getPayload()).get(10, TimeUnit.SECONDS);
                     event.setStatus(OutboxStatus.SENT);
-                    log.info("Sent nes message in {}", event.getEventType());
+                    log.info("Sent new message in {}", event.getEventType());
                     outboxEventRepository.save(event);
                 } catch (Exception e) {
                     int retryCount = event.getRetryCount();
