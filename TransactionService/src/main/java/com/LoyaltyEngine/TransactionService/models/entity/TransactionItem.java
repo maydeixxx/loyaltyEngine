@@ -22,7 +22,9 @@ public class TransactionItem {
     @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction;
 
+    @Column(nullable = false)
     private String category;
+    @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)

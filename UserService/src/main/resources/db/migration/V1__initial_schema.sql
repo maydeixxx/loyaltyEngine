@@ -17,7 +17,7 @@ CREATE TABLE outbox_events (
     event_type varchar(255) NOT NULL,
     payload TEXT NOT NULL,
     status varchar(255) NOT NULL,
-    retry_count INT NOT NULL
+    retry_count INT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_outbox_event_status_created_at ON outbox_events(status, created_at);
