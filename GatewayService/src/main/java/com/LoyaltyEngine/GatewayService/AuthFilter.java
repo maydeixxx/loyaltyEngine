@@ -15,6 +15,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -24,11 +25,13 @@ import java.util.List;
 @Component
 public class AuthFilter implements GlobalFilter, Ordered {
     private final JwtService jwtService;
-    private final List<String> allowedPaths;
 
-    public AuthFilter(JwtService jwtService, @Qualifier("allowedPaths") List<String> allowedPaths) {
+    private final List<String> patterns;
+    private final AntPathMatcher matcher = new AntPathMatcher();
+
+    public AuthFilter(JwtService jwtService, @Qualifier("allowedPaths") List<String> patterns) {
         this.jwtService = jwtService;
-        this.allowedPaths = allowedPaths;
+        this.patterns = patterns;
     }
 
     @Override
@@ -48,8 +51,8 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
             String path = request.getURI().getPath();
 
-            for (String ap : allowedPaths) {
-                if (path.contains(ap)) {
+            for (String pattern : patterns) {
+                if (matcher.match(pattern, path)) {
                     return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
                 }
             }
