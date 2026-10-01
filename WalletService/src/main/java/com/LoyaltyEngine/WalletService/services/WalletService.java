@@ -72,6 +72,10 @@ public class WalletService {
         Timer.Sample timer = Timer.start(registry);
 
         try {
+            if (amountOfTransaction.compareTo(totalItemPrice) > 0) {
+                throw new IllegalArgumentException("Amount of transaction cant be greater than total item price");
+            }
+
             WalletDomain wallet = findWalletByUserId(userId);
             Optional<WalletTransaction> walletTransactionByTransactionId = walletTransactionRepository.findWalletTransactionByTransactionId(transactionId);
 
@@ -85,13 +89,9 @@ public class WalletService {
             }
 
             Money balance = wallet.getBalance();
-            if (useCashback && balance.isGreaterThan(Money.zeroOf())) {
-                if (amountOfTransaction.compareTo(totalItemPrice) > 0) {
-                    throw new IllegalArgumentException("Amount of transaction cant be greater than total item price");
-                }
 
-                Money cashbackToUse = new Money(totalItemPrice.subtract(amountOfTransaction));
-
+            Money cashbackToUse = new Money(totalItemPrice.subtract(amountOfTransaction));
+            if (useCashback && balance.isGreaterThan(Money.zeroOf()) && !cashbackToUse.isZero()) {
                 if (balance.isLessThan(cashbackToUse)) {
                     throw new InsufficientFundsException("Insufficient funds");
                 }
@@ -111,11 +111,12 @@ public class WalletService {
                 walletTransactionRepository.save(walletTransactionMapper.domainToEntity(redeemCashback));
                 walletRepository.save(walletMapper.domainToEntity(wallet));
                 span.tag("wallet-transaction-id", redeemCashback.getId().value().toString());
+
             } else if (amountOfTransaction.compareTo(totalItemPrice) < 0) {
                 throw new InsufficientFundsException("Insufficient funds");
             }
 
-            if (!useCashback) {
+            if (!useCashback || cashbackToUse.isZero()) {
                 LocalDateTime timestamp = LocalDateTime.now();
                 wallet.credit(amount);
 

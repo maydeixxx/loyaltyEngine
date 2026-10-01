@@ -32,4 +32,8 @@ public record Money(BigDecimal amount) {
         return this.amount.compareTo(money.amount) < 0;
     }
 
+    public boolean isZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) == 0;
+    }
+
 }

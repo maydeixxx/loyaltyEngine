@@ -26,8 +26,7 @@ public class RuleEngineController {
         return ResponseEntity.status(201).body(String.format("New rule by category %s successfully created!", dto.category()));
     }
 
-    @GetMapping()
-    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/getRules")
     public ResponseEntity<?> getAllRules() {
         return ResponseEntity.ok().body(ruleEngineService.getAllRules());
     }
