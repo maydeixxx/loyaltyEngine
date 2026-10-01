@@ -3,7 +3,7 @@ package com.LoyaltyEngine.UserService.services;
 import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
 import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
-import com.LoyaltyEngine.UserService.models.User;
+import com.LoyaltyEngine.UserService.models.entity.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
 import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
