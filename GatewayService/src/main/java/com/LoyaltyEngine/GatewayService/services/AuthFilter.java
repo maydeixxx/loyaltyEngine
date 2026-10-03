@@ -1,5 +1,6 @@
-package com.LoyaltyEngine.GatewayService;
+package com.LoyaltyEngine.GatewayService.services;
 
+import com.LoyaltyEngine.GatewayService.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
