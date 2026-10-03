@@ -2,6 +2,7 @@ package com.LoyaltyEngine.TransactionService.services.interfaces;
 
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -17,4 +18,12 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
     List<OutboxEvent> findNewOutBoxEvents();
+
+    @Modifying
+    @Query(value = """
+                DELETE FROM outbox_events e
+                WHERE (e.status = 'FAILED' OR e.status = 'SENT')
+                AND e.processed_at < NOW() - interval '7 days'
+            """, nativeQuery = true)
+    void deleteOldEvents();
 }

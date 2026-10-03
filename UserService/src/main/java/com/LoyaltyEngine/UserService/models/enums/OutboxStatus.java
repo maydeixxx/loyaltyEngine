@@ -1,5 +1,5 @@
 package com.LoyaltyEngine.UserService.models.enums;
 
 public enum OutboxStatus {
-    NEW, SENT, FAILED
+    NEW, SENT, PROCESSING, FAILED
 }
