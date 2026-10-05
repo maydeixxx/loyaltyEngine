@@ -1,5 +1,8 @@
 package com.LoyaltyEngine.WalletService.services.configs;
 
+import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
+import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
+import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -16,6 +19,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 
 import java.util.HashMap;
@@ -46,7 +50,7 @@ public class KafkaListenerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>(CalculatedCashbackEventModel.class, false)
+                new ErrorHandlingDeserializer<>(new JacksonJsonDeserializer<>(CalculatedCashbackEventModel.class, false))
         );
     }
 

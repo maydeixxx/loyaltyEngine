@@ -4,6 +4,10 @@ import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashback
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionItemEvent;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.CashbackStrategy;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,8 +24,13 @@ import java.util.UUID;
 public class CalculateCashbackService {
     private final BigDecimal hundred = new BigDecimal("100.0");
     private final List<CashbackStrategy> cashbackStrategies;
+    private final MeterRegistry registry;
+    private final Tracer tracer;
 
     public CalculatedCashbackEventModel calculateCashback(TransactionCreatedEvent model, UUID transactionId) {
+        ScopedSpan span = tracer.startScopedSpan("calculate-cashback-span");
+        Timer.Sample timer = Timer.start(registry);
+
         try {
             UUID userId = model.userId();
             BigDecimal amountOfTransaction = model.amount();
@@ -42,6 +51,7 @@ public class CalculateCashbackService {
                 cashback = cashback.add(itemPrice.multiply(percentage).divide(hundred, 2, RoundingMode.HALF_EVEN));
             }
 
+            registry.counter("calculate.cashback", "status", "successful").increment();
             return new CalculatedCashbackEventModel(
                     transactionId,
                     userId,
@@ -54,7 +64,11 @@ public class CalculateCashbackService {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error calculating cashback: {}", e.getMessage());
+            registry.counter("calculate.cashback", "status", "failed").increment();
             throw new RuntimeException(e);
+        } finally {
+            span.end();
+            timer.stop(registry.timer("calculate.cashback.duration"));
         }
     }
 

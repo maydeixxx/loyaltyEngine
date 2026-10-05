@@ -121,7 +121,7 @@ public class TransactionService {
             span.tag("error.message", e.getMessage());
             span.tag("status", "FAILED");
 
-            log.error("Unexpected error: {}", e.getMessage());
+            log.error("Unexpected error creating transaction: {}", e.getMessage());
             throw new RuntimeException(e);
         } finally {
             span.end();
@@ -139,7 +139,7 @@ public class TransactionService {
         } catch (TransactionNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error: {}", e.getMessage());
+            log.error("Unexpected error getting transaction by id: {}", e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -162,6 +162,7 @@ public class TransactionService {
         } catch (DataException e) {
             throw new TransactionRepositoryException("Error getting transaction", e);
         } catch (Exception e) {
+            log.error("Unexpected error getting transaction by userId: {}", e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -183,7 +184,7 @@ public class TransactionService {
             log.error(e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error: {}", e.getMessage());
+            log.error("Unexpected error updating status of transaction: {}", e.getMessage());
             throw new RuntimeException(e);
         }
     }

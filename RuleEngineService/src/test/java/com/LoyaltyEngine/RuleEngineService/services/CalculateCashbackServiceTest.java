@@ -4,6 +4,8 @@ import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashback
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionItemEvent;
 import com.LoyaltyEngine.RuleEngineService.services.interfaces.CashbackStrategy;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,10 @@ class CalculateCashbackServiceTest {
     @Mock
     private CashbackStrategy defaultStrategy;
 
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+
+    private final Tracer tracer = Tracer.NOOP;
+
     private CalculateCashbackService calculateCashbackService;
 
     private final UUID transactionId = UUID.randomUUID();
@@ -37,7 +43,7 @@ class CalculateCashbackServiceTest {
 
     @BeforeEach
     void setUp() {
-        calculateCashbackService = new CalculateCashbackService(List.of(categoryStrategy, defaultStrategy));
+        calculateCashbackService = new CalculateCashbackService(List.of(categoryStrategy, defaultStrategy), registry, tracer);
     }
 
     @Test

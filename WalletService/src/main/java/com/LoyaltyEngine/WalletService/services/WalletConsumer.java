@@ -2,6 +2,7 @@ package com.LoyaltyEngine.WalletService.services;
 
 import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -29,11 +30,10 @@ public class WalletConsumer {
 
         try {
             walletService.creditPoints(userId, transactionId, model.amount(), model.useCashback(), model.amountOfTransaction(), model.totalItemPrice());
-            ack.acknowledge();
-        } catch (Exception e) {
-            log.error("Error processing cashback for transaction {} : {}", transactionId, e.getMessage());
+        } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+        ack.acknowledge();
     }
 
     @KafkaListener(

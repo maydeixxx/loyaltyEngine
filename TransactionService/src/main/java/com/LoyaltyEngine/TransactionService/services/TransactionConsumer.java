@@ -25,20 +25,15 @@ public class TransactionConsumer {
             containerFactory = "pointsFailedEventConcurrentKafkaListenerContainerFactory"
     )
     public void handlePointsFailed(ConsumerRecord<UUID, PointsFailedEvent> record) {
-        try {
-            UUID transactionId = record.key();
-            PointsFailedEvent pointsFailed = record.value();
-            String cause = pointsFailed.getCause();
-            LocalDateTime failedAt = pointsFailed.getFailedAt();
-            UUID userId = pointsFailed.getUserId();
-            BigDecimal amount = pointsFailed.getAmount();
+        UUID transactionId = record.key();
+        PointsFailedEvent pointsFailed = record.value();
+        String cause = pointsFailed.getCause();
+        LocalDateTime failedAt = pointsFailed.getFailedAt();
+        UUID userId = pointsFailed.getUserId();
+        BigDecimal amount = pointsFailed.getAmount();
 
-            transactionService.updateStatus(Status.REJECTED, transactionId);
-            log.info("``Новый статус транзакции [{}] - {} || Причина - {} || timestamp - {} || User id - {} || amount - {}", transactionId, Status.REJECTED, cause, failedAt, userId, amount);
-        } catch (Exception e) {
-            log.error("Error handling points failed: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        transactionService.updateStatus(Status.REJECTED, transactionId);
+        log.info("Новый статус транзакции [{}] - {} || Причина - {} || timestamp - {} || User id - {} || amount - {}", transactionId, Status.REJECTED, cause, failedAt, userId, amount);
     }
 
     @KafkaListener(
@@ -47,16 +42,11 @@ public class TransactionConsumer {
             containerFactory = "transactionHandledEventContainerFactory"
     )
     public void handleTransactionHandledEvent(ConsumerRecord<UUID, TransactionHandledEvent> record) {
-        try {
-            TransactionHandledEvent model = record.value();
-            UUID transactionId = model.getTransactionId();
-            UUID userId = model.getUserId();
+        TransactionHandledEvent model = record.value();
+        UUID transactionId = model.getTransactionId();
+        UUID userId = model.getUserId();
 
-            transactionService.updateStatus(Status.PROCESSED, transactionId);
-            log.info("Transaction {} for user {} successfully handled!", transactionId, userId);
-        } catch (Exception e) {
-            log.error("Error handling transaction handled event: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        transactionService.updateStatus(Status.PROCESSED, transactionId);
+        log.info("Transaction {} for user {} successfully handled!", transactionId, userId);
     }
 }

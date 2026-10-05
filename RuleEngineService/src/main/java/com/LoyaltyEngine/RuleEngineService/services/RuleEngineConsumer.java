@@ -21,34 +21,17 @@ public class RuleEngineConsumer {
     private final CalculateCashbackService calculateCashbackService;
     private final RuleEngineProducer ruleEngineProducer;
 
-    private final MeterRegistry registry;
-    private final Tracer tracer;
-
     @KafkaListener(
             topics = "${kafka.topics.transaction-created}",
             groupId = "rule_engine_service",
             containerFactory = "transactionCreatedEventModelConcurrentKafkaListenerContainerFactory"
     )
     public void handleTransactionCreatedEvent(ConsumerRecord<UUID, TransactionCreatedEvent> record) {
-        ScopedSpan span = tracer.startScopedSpan("calculate-cashback-span");
-        Timer.Sample timer = Timer.start(registry);
+        UUID transactionId = record.key();
+        CalculatedCashbackEventModel calculatedCashbackModel = calculateCashbackService.calculateCashback(record.value(), transactionId);
 
-        try {
-            UUID transactionId = record.key();
-            CalculatedCashbackEventModel calculatedCashbackModel = calculateCashbackService.calculateCashback(record.value(), transactionId);
-
-            ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);
-            registry.counter("calculate.cashback", "status", "successful").increment();
-            log.info("Total cashback for transaction {} : {}", transactionId, calculatedCashbackModel.amount());
-        } catch (Exception e) {
-            registry.counter("calculate.cashback", "status", "failed").increment();
-            log.error("Error handling transaction created event: {}", e.getMessage());
-            throw new RuntimeException(e);
-        } finally {
-            span.end();
-            timer.stop(registry.timer("calculate.cashback.duration"));
-        }
-
+        ruleEngineProducer.sendCalculatedCashback(transactionId, calculatedCashbackModel);
+        log.info("Total cashback for transaction {} : {}", transactionId, calculatedCashbackModel.amount());
     }
 
 }
