@@ -47,7 +47,7 @@ class CalculateCashbackServiceTest {
     }
 
     @Test
-    @DisplayName("Успешный расчет: первая стратегия обрабатывает категорию, вторая — дефолт")
+    @DisplayName("calculateCashback: correctly calculates cashback with mixed category and default strategies")
     void calculateCashback_mixedStrategies_calculatesCashbackCorrectly() {
         //given
         TransactionItemEvent item1 = new TransactionItemEvent("electronics", "Phone", new BigDecimal("1000.00"));
@@ -80,7 +80,7 @@ class CalculateCashbackServiceTest {
     }
 
     @Test
-    @DisplayName("Если ни одна стратегия не подошла — выбрасывается IllegalStateException")
+    @DisplayName("calculateCashback: throws IllegalStateException when no strategy is applicable")
     void calculateCashback_noStrategyApplicable_throwsIllegalStateException() {
         //given
         TransactionItemEvent item = new TransactionItemEvent("unknown", "Widget", new BigDecimal("100.00"));
@@ -105,7 +105,7 @@ class CalculateCashbackServiceTest {
     }
 
     @Test
-    @DisplayName("Пустой список позиций возвращает нулевой кэшбек")
+    @DisplayName("calculateCashback: returns zero cashback for empty item list")
     void calculateCashback_emptyItems_returnsZeroCashback() {
         //given
         TransactionCreatedEvent transaction = new TransactionCreatedEvent(
@@ -126,7 +126,7 @@ class CalculateCashbackServiceTest {
     }
 
     @Test
-    @DisplayName("null список позиций безопасно возвращает нулевой кэшбек")
+    @DisplayName("calculateCashback: returns zero cashback for null item list")
     void calculateCashback_nullItems_returnsZeroCashback() {
         //given
         TransactionCreatedEvent transaction = new TransactionCreatedEvent(
