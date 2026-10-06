@@ -2,10 +2,7 @@ package com.LoyaltyEngine.TransactionService.services;
 
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.TransactionService.models.enums.OutboxStatus;
-import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreatedEvent;
 import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepository;
-import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,14 +20,12 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class OutboxEventPublisher {
     private final OutboxEventRepository outboxEventRepository;
-    private final KafkaTemplate<UUID, TransactionCreatedEvent> template;
-    private final ObjectMapper mapper;
+    private final KafkaTemplate<UUID, String> template;
     private final TransactionTemplate transactionTemplate;
 
     @Scheduled(fixedDelay = 5000)
     public void sendPendingEvents() {
         try {
-
             List<OutboxEvent> events = claimNewEvents();
             if (events == null || events.isEmpty()) {
                 return;
@@ -40,7 +35,7 @@ public class OutboxEventPublisher {
 
             for (OutboxEvent event : events) {
                 try {
-                    TransactionCreatedEvent payload = mapper.readValue(event.getPayload(), TransactionCreatedEvent.class);
+                    String payload = event.getPayload();
                     String topic = event.getEventType().replace(".", "_");
                     UUID transactionId = event.getAggregateId();
 
@@ -49,10 +44,6 @@ public class OutboxEventPublisher {
                     outboxEventRepository.save(event);
 
                     log.info("Message sent in {}. Transaction - {}", topic, transactionId);
-                } catch (JacksonException e) {
-                    event.setStatus(OutboxStatus.FAILED);
-                    outboxEventRepository.save(event);
-                    log.error("Error handling payload: {}", e.getMessage());
                 } catch (Exception e) {
                     log.error("Error sending event [type = {}]: {}", event.getEventType(), e.getMessage());
                     if (event.getRetryCount() >= 3) {

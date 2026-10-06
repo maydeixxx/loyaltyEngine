@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.TransactionService.services.configs;
 
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
+import com.LoyaltyEngine.TransactionService.models.eventModels.CancellationFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionHandledEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,30 @@ public class KafkaListenerConfig {
     public ConcurrentKafkaListenerContainerFactory<UUID, PointsFailedEvent> pointsFailedEventConcurrentKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<UUID, PointsFailedEvent> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
         containerFactory.setConsumerFactory(pointsFailedEventConsumerFactory());
+        containerFactory.setCommonErrorHandler(errorHandler());
+
+        return containerFactory;
+    }
+
+    @Bean
+    public ConsumerFactory<UUID, CancellationFailedEvent> cancellationFailedEventConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+        props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new UUIDDeserializer(),
+                new ErrorHandlingDeserializer<>(new JacksonJsonDeserializer<>(CancellationFailedEvent.class, false))
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<UUID, CancellationFailedEvent> cancellationFailedEventConcurrentKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, CancellationFailedEvent> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
+        containerFactory.setConsumerFactory(cancellationFailedEventConsumerFactory());
         containerFactory.setCommonErrorHandler(errorHandler());
 
         return containerFactory;

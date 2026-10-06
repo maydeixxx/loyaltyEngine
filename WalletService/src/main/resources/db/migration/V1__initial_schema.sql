@@ -11,7 +11,7 @@ CREATE TABLE wallets (
 CREATE TABLE wallet_transactions (
     id UUID PRIMARY KEY,
     wallet_id UUID NOT NULL,
-    transaction_id UUID NOT NULL UNIQUE,
+    transaction_id UUID NOT NULL,
     amount DECIMAL(19, 2) NOT NULL,
     type varchar(255) NOT NULL,
     created_at TIMESTAMP NOT NULL,

@@ -2,6 +2,7 @@ package com.LoyaltyEngine.WalletService.services;
 
 import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
+import com.LoyaltyEngine.WalletService.models.events.CancelTransactionEventModel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,21 @@ public class WalletConsumer {
             log.warn("Wallet for user [{}] already created", userId);
         } catch (Exception e) {
             log.error("Error handling user created event: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.transaction-cancel}",
+            groupId = "wallet_service",
+            containerFactory = "cancelTransactionEventModelConcurrentKafkaListenerContainerFactory"
+    )
+    public void handleTransactionCancellation(ConsumerRecord<UUID, CancelTransactionEventModel> record) {
+        UUID transactionId = record.key();
+
+        try {
+            walletService.cancelTransaction(transactionId, record.value());
+        } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
