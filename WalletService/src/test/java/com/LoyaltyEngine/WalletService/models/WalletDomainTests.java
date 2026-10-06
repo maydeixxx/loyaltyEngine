@@ -3,6 +3,7 @@ package com.LoyaltyEngine.WalletService.models;
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
 import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Assertions;
@@ -172,7 +173,7 @@ public class WalletDomainTests {
         wallet.credit(new BigDecimal("10.00"));
 
         //when
-        wallet.debit(new BigDecimal("5.00"));
+        wallet.debit(new BigDecimal("5.00"), TransactionType.DEBIT);
 
         //then
         Assertions.assertEquals(new BigDecimal("5.00"), wallet.getBalance().amount());
@@ -188,7 +189,7 @@ public class WalletDomainTests {
         wallet.blockWallet();
 
         //when
-        Assertions.assertThrows(WalletBlockedException.class, () -> wallet.debit(new BigDecimal("5.00")), "Wallet isn`t active");
+        Assertions.assertThrows(WalletBlockedException.class, () -> wallet.debit(new BigDecimal("5.00"), TransactionType.DEBIT), "Wallet isn`t active");
     }
 
     @Test
@@ -199,7 +200,21 @@ public class WalletDomainTests {
         WalletDomain wallet = WalletDomain.createWallet(userId);
 
         //when
-        Assertions.assertThrows(InsufficientFundsException.class, () -> wallet.debit(new BigDecimal("5.00")), "Insufficient funds");
+        Assertions.assertThrows(InsufficientFundsException.class, () -> wallet.debit(new BigDecimal("5.00"), TransactionType.DEBIT), "Insufficient funds");
+    }
+
+    @Test
+    @DisplayName("Списание кешбека при отмене транзакции уводит баланс в минус")
+    void debit_cancelTransactionType_allowsNegativeBalance() {
+        //given
+        UUID userId = UuidCreator.getTimeOrderedEpoch();
+        WalletDomain wallet = WalletDomain.createWallet(userId);
+
+        //when
+        wallet.debit(new BigDecimal("15.00"), TransactionType.CANCEL);
+
+        //then
+        Assertions.assertEquals(new BigDecimal("-15.00"), wallet.getBalance().amount());
     }
 
     @Test

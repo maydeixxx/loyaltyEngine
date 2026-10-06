@@ -1,13 +1,11 @@
 package com.LoyaltyEngine.TransactionService.models.eventModels;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record PointsFailedEvent(
+public record CancellationFailedEvent(
         UUID transactionId,
         UUID userId,
-        BigDecimal amount,
         String cause,
         LocalDateTime failedAt
 ) {

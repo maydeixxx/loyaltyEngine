@@ -1,25 +1,16 @@
 package com.LoyaltyEngine.TransactionService.models.eventModels;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-public class TransactionCreatedEvent {
-    private UUID transactionId;
-    private UUID userId;
-    private BigDecimal amount;
-    private String currency;
-    private List<TransactionItemEvent> items;
-    private LocalDateTime createdAt;
-    private Boolean useCashbackBalance;
+public record TransactionCreatedEvent(
+        UUID transactionId,
+        UUID userId,
+        BigDecimal amount,
+        List<TransactionItemEvent> items,
+        LocalDateTime createdAt,
+        Boolean useCashbackBalance
+) {
 }

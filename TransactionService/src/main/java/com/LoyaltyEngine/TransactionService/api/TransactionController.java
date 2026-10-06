@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.TransactionService.api;
 
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
+import com.LoyaltyEngine.TransactionService.models.dto.CancelTransactionDTO;
 import com.LoyaltyEngine.TransactionService.models.dto.CreateTransaction;
 import com.LoyaltyEngine.TransactionService.models.dto.TransactionDTO;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
@@ -61,4 +62,10 @@ public class TransactionController {
         return ResponseEntity.ok((transactionById));
     }
 
+    @PutMapping("/cancel")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #cancelTransactionDTO.userId")
+    public ResponseEntity<Void> cancelTransaction(@RequestBody @Valid CancelTransactionDTO cancelTransactionDTO) {
+        transactionService.cancelTransaction(cancelTransactionDTO.transactionId());
+        return ResponseEntity.status(204).build();
+    }
 }

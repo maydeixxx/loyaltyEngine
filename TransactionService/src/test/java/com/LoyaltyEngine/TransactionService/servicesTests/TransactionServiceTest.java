@@ -6,6 +6,7 @@ import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
+import com.LoyaltyEngine.TransactionService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.services.TransactionMapper;
 import com.LoyaltyEngine.TransactionService.services.TransactionService;
@@ -81,6 +82,7 @@ class TransactionServiceTest {
                 tracer
         );
         ReflectionTestUtils.setField(transactionService, "transactionCreatedTopic", "transaction-created");
+        ReflectionTestUtils.setField(transactionService, "cancelTransactionTopic", "transaction-cancel-topic");
     }
 
     @Test
@@ -112,10 +114,18 @@ class TransactionServiceTest {
         TransactionDomain domain = TransactionDomain.create(userId, idempotencyKey, new BigDecimal("150.00"), items, false);
 
         when(transactionRepository.getTransactionByIdempotencyKey(idempotencyKey)).thenReturn(Optional.empty());
-        when(transactionMapper.transactionDomainToEntity(any(TransactionDomain.class))).thenReturn(entity);
+        when(transactionMapper.transactionDomainToEntity(any(TransactionDomain.class))).thenAnswer(invocation -> {
+            TransactionDomain d = invocation.getArgument(0);
+            entity.setId(d.getId().value());
+            return entity;
+        });
         when(transactionRepository.save(entity)).thenReturn(entity);
         when(mapper.writeValueAsString(any())).thenReturn("{\"transactionId\":\"" + transactionId + "\"}");
-        when(transactionMapper.transactionEntityToDomain(entity)).thenReturn(domain);
+        when(transactionMapper.transactionEntityToDomain(entity)).thenAnswer(invocation -> {
+            return TransactionDomain.restoreFromExisting(
+                    entity.getId(), userId, idempotencyKey, new BigDecimal("150.00"), items, LocalDateTime.now(), Status.NEW, false
+            );
+        });
 
         //when
         TransactionDomain result = transactionService.createTransaction(userId, new BigDecimal("150.00"), items, idempotencyKey, false);
@@ -127,7 +137,7 @@ class TransactionServiceTest {
         verify(outboxEventRepository).save(outboxEventCaptor.capture());
 
         OutboxEvent capturedOutbox = outboxEventCaptor.getValue();
-        assertEquals(transactionId, capturedOutbox.getAggregateId());
+        assertEquals(result.getId().value(), capturedOutbox.getAggregateId());
         assertEquals("transaction-created", capturedOutbox.getEventType());
     }
 
@@ -279,5 +289,103 @@ class TransactionServiceTest {
                 transactionService.updateStatus(Status.PROCESSED, transactionId)
         );
         verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: saves outbox event when transaction is in PROCESSED status")
+    void cancelTransaction_processedStatus_savesOutboxEvent() throws JsonProcessingException {
+        //given
+        Transaction entity = new Transaction();
+        TransactionDomain processedDomain = TransactionDomain.restoreFromExisting(
+                transactionId, userId, idempotencyKey, new BigDecimal("150.00"), items, LocalDateTime.now(), Status.PROCESSED, false
+        );
+
+        when(transactionRepository.getTransactionById(transactionId)).thenReturn(Optional.of(entity));
+        when(transactionMapper.transactionEntityToDomain(entity)).thenReturn(processedDomain);
+        when(mapper.writeValueAsString(any())).thenReturn("{}");
+
+        //when
+        transactionService.cancelTransaction(transactionId);
+
+        //then
+        verify(outboxEventRepository).save(outboxEventCaptor.capture());
+        OutboxEvent captured = outboxEventCaptor.getValue();
+        assertEquals(transactionId, captured.getAggregateId());
+        assertEquals("transaction-cancel-topic", captured.getEventType());
+        assertEquals(OutboxStatus.NEW, captured.getStatus());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: throws IllegalArgumentException when transaction is already CANCELLED")
+    void cancelTransaction_alreadyCancelled_throwsIllegalArgumentException() {
+        //given
+        Transaction entity = new Transaction();
+        TransactionDomain cancelledDomain = TransactionDomain.restoreFromExisting(
+                transactionId, userId, idempotencyKey, new BigDecimal("150.00"), items, LocalDateTime.now(), Status.CANCELLED, false
+        );
+
+        when(transactionRepository.getTransactionById(transactionId)).thenReturn(Optional.of(entity));
+        when(transactionMapper.transactionEntityToDomain(entity)).thenReturn(cancelledDomain);
+
+        //when & then
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                transactionService.cancelTransaction(transactionId)
+        );
+        assertEquals("Status already cancelled", ex.getMessage());
+        verify(outboxEventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: throws IllegalArgumentException when transaction is in NEW status")
+    void cancelTransaction_newStatus_throwsIllegalArgumentException() {
+        //given
+        Transaction entity = new Transaction();
+        TransactionDomain newDomain = TransactionDomain.restoreFromExisting(
+                transactionId, userId, idempotencyKey, new BigDecimal("150.00"), items, LocalDateTime.now(), Status.NEW, false
+        );
+
+        when(transactionRepository.getTransactionById(transactionId)).thenReturn(Optional.of(entity));
+        when(transactionMapper.transactionEntityToDomain(entity)).thenReturn(newDomain);
+
+        //when & then
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                transactionService.cancelTransaction(transactionId)
+        );
+        assertEquals("Cant change status not from processed", ex.getMessage());
+        verify(outboxEventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: throws TransactionNotFoundException when transaction does not exist")
+    void cancelTransaction_missingTransaction_throwsTransactionNotFoundException() {
+        //given
+        when(transactionRepository.getTransactionById(transactionId)).thenReturn(Optional.empty());
+
+        //when & then
+        assertThrows(TransactionNotFoundException.class, () ->
+                transactionService.cancelTransaction(transactionId)
+        );
+        verify(outboxEventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("updateStatus: successfully updates status to CANCELLED from PROCESSED")
+    void updateStatus_fromProcessedToCancelled_updatesStatusAndSaves() {
+        //given
+        Transaction entity = new Transaction();
+        TransactionDomain processedDomain = TransactionDomain.restoreFromExisting(
+                transactionId, userId, idempotencyKey, new BigDecimal("150.00"), items, LocalDateTime.now(), Status.PROCESSED, false
+        );
+
+        when(transactionRepository.getTransactionById(transactionId)).thenReturn(Optional.of(entity));
+        when(transactionMapper.transactionEntityToDomain(entity)).thenReturn(processedDomain);
+        when(transactionMapper.transactionDomainToEntity(processedDomain)).thenReturn(entity);
+
+        //when
+        transactionService.updateStatus(Status.CANCELLED, transactionId);
+
+        //then
+        assertEquals(Status.CANCELLED, processedDomain.getStatus());
+        verify(transactionRepository).save(entity);
     }
 }

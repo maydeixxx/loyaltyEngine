@@ -129,8 +129,8 @@ public class OutboxEventPublisherTests {
 
         //then
         Assertions.assertEquals(transaction.getId().value(), id);
-        Assertions.assertEquals(transaction.getUserId().value(), createdTransaction.getUserId());
-        Assertions.assertEquals(transaction.getAmount().amount(), new Money(createdTransaction.getAmount()).amount());
+        Assertions.assertEquals(transaction.getUserId().value(), createdTransaction.userId());
+        Assertions.assertEquals(transaction.getAmount().amount(), new Money(createdTransaction.amount()).amount());
         Assertions.assertEquals(Status.NEW, transaction.getStatus());
     }
 }

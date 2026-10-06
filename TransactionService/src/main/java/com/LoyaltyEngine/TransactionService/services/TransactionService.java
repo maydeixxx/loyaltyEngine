@@ -9,6 +9,7 @@ import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.TransactionService.models.entity.Transaction;
+import com.LoyaltyEngine.TransactionService.models.eventModels.CancelTransactionEventModel;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreatedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionItemEvent;
 import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepository;
@@ -46,6 +47,9 @@ public class TransactionService {
     @Value("${kafka.topics.transaction-created}")
     private String transactionCreatedTopic;
 
+    @Value("${kafka.topics.transaction-cancel}")
+    private String cancelTransactionTopic;
+
     private final MeterRegistry registry;
     private final Tracer tracer;
 
@@ -60,34 +64,34 @@ public class TransactionService {
         }
 
         TransactionDomain newTransaction = TransactionDomain.create(userId, idempotencyKey, amount, items, useCashback);
-        span.tag("transaction.id", newTransaction.getId().value().toString());
+        UUID transactionId = newTransaction.getId().value();
+        span.tag("transaction.id", transactionId.toString());
 
         List<TransactionItemEvent> eventItems = items
                 .stream()
                 .map(
-                        item -> TransactionItemEvent.builder()
-                                .name(item.getName())
-                                .price(item.getPrice().amount())
-                                .category(item.getCategory())
-                                .build()
+                        item -> new TransactionItemEvent(
+                                item.getCategory(),
+                                item.getName(),
+                                item.getPrice().amount()
+                        )
                 )
                 .toList();
 
-        TransactionCreatedEvent transactionCreated = TransactionCreatedEvent.builder()
-                .userId(userId)
-                .amount(amount)
-                .createdAt(newTransaction.getCreatedAt())
-                .items(eventItems)
-                .useCashbackBalance(useCashback)
-                .build();
-
+        TransactionCreatedEvent transactionCreated = new TransactionCreatedEvent(
+                transactionId,
+                userId,
+                amount,
+                eventItems,
+                newTransaction.getCreatedAt(),
+                useCashback
+        );
         try {
             Transaction savedTransaction = transactionRepository.save(transactionMapper.transactionDomainToEntity(newTransaction));
-            transactionCreated.setTransactionId(savedTransaction.getId());
 
             OutboxEvent outboxEvent = OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(savedTransaction.getId())
+                    .aggregateId(transactionId)
                     .createdAt(LocalDateTime.now())
                     .eventType(transactionCreatedTopic)
                     .payload(mapper.writeValueAsString(transactionCreated))
@@ -95,7 +99,7 @@ public class TransactionService {
                     .build();
             outboxEventRepository.save(outboxEvent);
 
-            log.info("Successfully saved new trans. - id: {}", savedTransaction.getId());
+            log.info("Successfully saved new trans. - id: {}", transactionId);
 
             span.tag("status", "SUCCESSFUL");
             registry.counter("transaction.create", "status", "successful").increment();
@@ -177,6 +181,7 @@ public class TransactionService {
             switch (status) {
                 case PROCESSED -> transaction.completeTransaction();
                 case REJECTED -> transaction.rejectTransaction();
+                case CANCELLED -> transaction.cancelTransaction();
             }
 
             transactionRepository.save(transactionMapper.transactionDomainToEntity(transaction));
@@ -185,6 +190,37 @@ public class TransactionService {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error updating status of transaction: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Transactional
+    public void cancelTransaction(UUID transactionId) {
+        try {
+            TransactionDomain transaction = getTransactionById(transactionId);
+            if (transaction.getStatus().equals(Status.CANCELLED)) throw new IllegalArgumentException("Status already cancelled");
+            if (!transaction.getStatus().equals(Status.PROCESSED)) throw new IllegalArgumentException("Cant change status not from processed");
+
+            CancelTransactionEventModel eventModel = new CancelTransactionEventModel(
+                    transactionId,
+                    transaction.getUserId().value(),
+                    transaction.getAmount().amount(),
+                    transaction.getUseCashbackBalance()
+            );
+
+            OutboxEvent event = OutboxEvent.builder()
+                    .eventType(cancelTransactionTopic)
+                    .aggregateId(transactionId)
+                    .payload(mapper.writeValueAsString(eventModel))
+                    .createdAt(LocalDateTime.now())
+                    .retryCount(0)
+                    .status(OutboxStatus.NEW)
+                    .build();
+            outboxEventRepository.save(event);
+        } catch (TransactionNotFoundException | IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error publishing event 'cancel transaction' for [{}]", transactionId);
             throw new RuntimeException(e);
         }
     }

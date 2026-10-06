@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.TransactionService.services;
 
 import com.LoyaltyEngine.TransactionService.models.enums.Status;
+import com.LoyaltyEngine.TransactionService.models.eventModels.CancellationFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionHandledEvent;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +28,13 @@ public class TransactionConsumer {
     public void handlePointsFailed(ConsumerRecord<UUID, PointsFailedEvent> record) {
         UUID transactionId = record.key();
         PointsFailedEvent pointsFailed = record.value();
-        String cause = pointsFailed.getCause();
-        LocalDateTime failedAt = pointsFailed.getFailedAt();
-        UUID userId = pointsFailed.getUserId();
-        BigDecimal amount = pointsFailed.getAmount();
+        String cause = pointsFailed.cause();
+        LocalDateTime failedAt = pointsFailed.failedAt();
+        UUID userId = pointsFailed.userId();
+        BigDecimal amount = pointsFailed.amount();
 
         transactionService.updateStatus(Status.REJECTED, transactionId);
-        log.info("Новый статус транзакции [{}] - {} || Причина - {} || timestamp - {} || User id - {} || amount - {}", transactionId, Status.REJECTED, cause, failedAt, userId, amount);
+        log.info("New status of transaction [{}] - {} || Cause - {} || Timestamp - {} || User id - {} || Amount - {}", transactionId, Status.REJECTED, cause, failedAt, userId, amount);
     }
 
     @KafkaListener(
@@ -43,10 +44,39 @@ public class TransactionConsumer {
     )
     public void handleTransactionHandledEvent(ConsumerRecord<UUID, TransactionHandledEvent> record) {
         TransactionHandledEvent model = record.value();
-        UUID transactionId = model.getTransactionId();
-        UUID userId = model.getUserId();
+        UUID transactionId = model.transactionId();
+        UUID userId = model.userId();
 
         transactionService.updateStatus(Status.PROCESSED, transactionId);
         log.info("Transaction {} for user {} successfully handled!", transactionId, userId);
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.transaction-cancellation-handled}",
+            groupId = "transaction_service",
+            containerFactory = "transactionHandledEventContainerFactory"
+    )
+    public void handleTransactionCancellation(ConsumerRecord<UUID, TransactionHandledEvent> record) {
+        TransactionHandledEvent model = record.value();
+        UUID transactionId = model.transactionId();
+        UUID userId = model.userId();
+
+        transactionService.updateStatus(Status.CANCELLED, transactionId);
+        log.info("Transaction {} for user {} successfully cancelled!", transactionId, userId);
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.transaction-cancellation-failed}",
+            groupId = "transaction_service",
+            containerFactory = "cancellationFailedEventConcurrentKafkaListenerContainerFactory"
+    )
+    public void handleCancellationFailed(ConsumerRecord<UUID, CancellationFailedEvent> record) {
+        UUID transactionId = record.key();
+        CancellationFailedEvent cancellationFailedEvent = record.value();
+        String cause = cancellationFailedEvent.cause();
+        LocalDateTime failedAt = cancellationFailedEvent.failedAt();
+        UUID userId = cancellationFailedEvent.userId();
+
+        log.info("Error cancellation transaction [{}] || Cause - {} || Timestamp - {} || User id - {}", transactionId, cause, failedAt, userId);
     }
 }

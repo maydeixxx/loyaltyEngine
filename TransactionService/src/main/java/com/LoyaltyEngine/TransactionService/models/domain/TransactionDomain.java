@@ -102,6 +102,16 @@ public class TransactionDomain {
         this.status = Status.PROCESSED;
     }
 
+    public void cancelTransaction() {
+        if (this.status.equals(Status.CANCELLED)) {
+            log.warn("Status of transaction [{}] already cancelled", this.id.value());
+            return;
+        }
+        if (!this.status.equals(Status.PROCESSED))
+            throw new IllegalArgumentException("Cant change status to CANCELLED not from PROCESSED");
+        this.status = Status.CANCELLED;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof TransactionDomain that)) return false;

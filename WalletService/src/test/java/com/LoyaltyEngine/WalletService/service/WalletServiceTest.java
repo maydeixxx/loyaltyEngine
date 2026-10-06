@@ -18,6 +18,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.tracing.Tracer;
+import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
+import com.LoyaltyEngine.WalletService.models.events.CancelTransactionEventModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -82,6 +86,8 @@ class WalletServiceTest {
         );
         ReflectionTestUtils.setField(walletService, "transactionHandled", "transaction-handled-topic");
         ReflectionTestUtils.setField(walletService, "pointsFailed", "points-failed-topic");
+        ReflectionTestUtils.setField(walletService, "cancellationFailed", "transaction-cancellation-failed-topic");
+        ReflectionTestUtils.setField(walletService, "cancellationHandled", "transaction-cancellation-handled-topic");
     }
 
     @Test
@@ -345,5 +351,209 @@ class WalletServiceTest {
 
         //when & then
         assertThrows(WalletNotFoundException.class, () -> walletService.findWalletByUserId(userId));
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: purchase without cashback debits cashback into negative and publishes handled event")
+    void cancelTransaction_purchaseWithoutCashback_debitsCashbackIntoNegativeAndPublishesHandledEvent() throws JsonProcessingException {
+        //given
+        CancelTransactionEventModel transactionModel = new CancelTransactionEventModel(
+                transactionId, userId, new BigDecimal("100.00"), false
+        );
+
+        Wallet walletEntity = new Wallet();
+        walletEntity.setId(walletId);
+        WalletDomain walletDomain = WalletDomain.restoreFromExisting(
+                walletId, userId, BigDecimal.ZERO, WalletStatus.ACTIVE, 1L, LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        WalletTransaction origTransactionEntity = new WalletTransaction();
+        WalletTransactionDomain origTransactionDomain = WalletTransactionDomain.restoreFromExisting(
+                UUID.randomUUID(), walletId, transactionId, new BigDecimal("50.00"),
+                TransactionType.CREDIT, LocalDateTime.now(), "Original cashback"
+        );
+
+        when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
+        when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
+        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of(origTransactionEntity));
+        when(walletTransactionMapper.entityToDomain(origTransactionEntity)).thenReturn(origTransactionDomain);
+        when(walletTransactionMapper.domainToEntity(any(WalletTransactionDomain.class))).thenReturn(new WalletTransaction());
+        when(walletMapper.domainToEntity(walletDomain)).thenReturn(walletEntity);
+        when(mapper.writeValueAsString(any())).thenReturn("{}");
+
+        //when
+        walletService.cancelTransaction(transactionId, transactionModel);
+
+        //then
+        assertEquals(new BigDecimal("-50.00"), walletDomain.getBalance().amount());
+        verify(walletTransactionRepository).save(any(WalletTransaction.class));
+        verify(walletRepository).save(walletEntity);
+        verify(outboxEventService).saveNewOutboxEvent(outboxEventCaptor.capture());
+
+        OutboxEvent event = outboxEventCaptor.getValue();
+        assertEquals(transactionId, event.getAggregateId());
+        assertEquals("transaction-cancellation-handled-topic", event.getEventType());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: purchase with cashback spent refunds cashback back and publishes handled event")
+    void cancelTransaction_purchaseWithCashback_creditsCashbackBackAndPublishesHandledEvent() throws JsonProcessingException {
+        //given
+        CancelTransactionEventModel transactionModel = new CancelTransactionEventModel(
+                transactionId, userId, new BigDecimal("100.00"), true
+        );
+
+        Wallet walletEntity = new Wallet();
+        walletEntity.setId(walletId);
+        WalletDomain walletDomain = WalletDomain.restoreFromExisting(
+                walletId, userId, new BigDecimal("20.00"), WalletStatus.ACTIVE, 1L, LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        WalletTransaction origTransactionEntity = new WalletTransaction();
+        WalletTransactionDomain origTransactionDomain = WalletTransactionDomain.restoreFromExisting(
+                UUID.randomUUID(), walletId, transactionId, new BigDecimal("30.00"),
+                TransactionType.DEBIT, LocalDateTime.now(), "Redeem cashback"
+        );
+
+        when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
+        when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
+        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of(origTransactionEntity));
+        when(walletTransactionMapper.entityToDomain(origTransactionEntity)).thenReturn(origTransactionDomain);
+        when(walletTransactionMapper.domainToEntity(any(WalletTransactionDomain.class))).thenReturn(new WalletTransaction());
+        when(walletMapper.domainToEntity(walletDomain)).thenReturn(walletEntity);
+        when(mapper.writeValueAsString(any())).thenReturn("{}");
+
+        //when
+        walletService.cancelTransaction(transactionId, transactionModel);
+
+        //then
+        assertEquals(new BigDecimal("50.00"), walletDomain.getBalance().amount());
+        verify(walletTransactionRepository).save(any(WalletTransaction.class));
+        verify(walletRepository).save(walletEntity);
+        verify(outboxEventService).saveNewOutboxEvent(outboxEventCaptor.capture());
+
+        OutboxEvent event = outboxEventCaptor.getValue();
+        assertEquals(transactionId, event.getAggregateId());
+        assertEquals("transaction-cancellation-handled-topic", event.getEventType());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: blocked wallet publishes cancellation failed event")
+    void cancelTransaction_blockedWallet_publishesCancellationFailedEvent() throws JsonProcessingException {
+        //given
+        CancelTransactionEventModel transactionModel = new CancelTransactionEventModel(
+                transactionId, userId, new BigDecimal("100.00"), false
+        );
+
+        Wallet walletEntity = new Wallet();
+        WalletDomain walletDomain = WalletDomain.restoreFromExisting(
+                walletId, userId, BigDecimal.TEN, WalletStatus.BLOCKED, 1L, LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
+        when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
+        when(mapper.writeValueAsString(any())).thenReturn("{}");
+
+        //when
+        walletService.cancelTransaction(transactionId, transactionModel);
+
+        //then
+        verify(walletRepository, never()).save(any());
+        verify(walletTransactionRepository, never()).save(any());
+        verify(outboxEventService).saveNewOutboxEvent(outboxEventCaptor.capture());
+
+        OutboxEvent event = outboxEventCaptor.getValue();
+        assertEquals(transactionId, event.getAggregateId());
+        assertEquals("transaction-cancellation-failed-topic", event.getEventType());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: wallet not found publishes cancellation failed event")
+    void cancelTransaction_walletNotFound_publishesCancellationFailedEvent() throws JsonProcessingException {
+        //given
+        CancelTransactionEventModel transactionModel = new CancelTransactionEventModel(
+                transactionId, userId, new BigDecimal("100.00"), false
+        );
+
+        when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.empty());
+        when(mapper.writeValueAsString(any())).thenReturn("{}");
+
+        //when
+        walletService.cancelTransaction(transactionId, transactionModel);
+
+        //then
+        verify(walletRepository, never()).save(any());
+        verify(walletTransactionRepository, never()).save(any());
+        verify(outboxEventService).saveNewOutboxEvent(outboxEventCaptor.capture());
+
+        OutboxEvent event = outboxEventCaptor.getValue();
+        assertEquals(transactionId, event.getAggregateId());
+        assertEquals("transaction-cancellation-failed-topic", event.getEventType());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: original transaction not found publishes cancellation failed event")
+    void cancelTransaction_transactionNotFound_publishesCancellationFailedEvent() throws JsonProcessingException {
+        //given
+        CancelTransactionEventModel transactionModel = new CancelTransactionEventModel(
+                transactionId, userId, new BigDecimal("100.00"), false
+        );
+
+        Wallet walletEntity = new Wallet();
+        walletEntity.setId(walletId);
+        WalletDomain walletDomain = WalletDomain.restoreFromExisting(
+                walletId, userId, BigDecimal.TEN, WalletStatus.ACTIVE, 1L, LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
+        when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
+        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of());
+        when(mapper.writeValueAsString(any())).thenReturn("{}");
+
+        //when
+        walletService.cancelTransaction(transactionId, transactionModel);
+
+        //then
+        verify(walletRepository, never()).save(any());
+        verify(walletTransactionRepository, never()).save(any());
+        verify(outboxEventService).saveNewOutboxEvent(outboxEventCaptor.capture());
+
+        OutboxEvent event = outboxEventCaptor.getValue();
+        assertEquals(transactionId, event.getAggregateId());
+        assertEquals("transaction-cancellation-failed-topic", event.getEventType());
+    }
+
+    @Test
+    @DisplayName("cancelTransaction: already cancelled transaction returns idempotently without changes")
+    void cancelTransaction_alreadyCancelled_returnsIdempotentlyWithoutChanges() throws JsonProcessingException {
+        //given
+        CancelTransactionEventModel transactionModel = new CancelTransactionEventModel(
+                transactionId, userId, new BigDecimal("100.00"), false
+        );
+
+        Wallet walletEntity = new Wallet();
+        walletEntity.setId(walletId);
+        WalletDomain walletDomain = WalletDomain.restoreFromExisting(
+                walletId, userId, BigDecimal.TEN, WalletStatus.ACTIVE, 1L, LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        WalletTransaction cancelTransactionEntity = new WalletTransaction();
+        WalletTransactionDomain cancelTransactionDomain = WalletTransactionDomain.restoreFromExisting(
+                UUID.randomUUID(), walletId, transactionId, new BigDecimal("50.00"),
+                TransactionType.CANCEL, LocalDateTime.now(), "Cancellation transaction"
+        );
+
+        when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
+        when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
+        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of(cancelTransactionEntity));
+        when(walletTransactionMapper.entityToDomain(cancelTransactionEntity)).thenReturn(cancelTransactionDomain);
+
+        //when
+        walletService.cancelTransaction(transactionId, transactionModel);
+
+        //then
+        verify(walletRepository, never()).save(any());
+        verify(walletTransactionRepository, never()).save(any());
+        verify(outboxEventService, never()).saveNewOutboxEvent(any());
     }
 }

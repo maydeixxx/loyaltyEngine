@@ -9,6 +9,8 @@ import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.Money;
+import com.LoyaltyEngine.WalletService.models.events.CancelTransactionEventModel;
+import com.LoyaltyEngine.WalletService.models.events.CancellationFailedEvent;
 import com.LoyaltyEngine.WalletService.models.events.PointsFailedEvent;
 import com.LoyaltyEngine.WalletService.models.events.TransactionHandledEvent;
 import com.LoyaltyEngine.WalletService.services.interfaces.*;
@@ -47,6 +49,10 @@ public class WalletService {
     private String transactionHandled;
     @Value("${kafka.topics.points-failed}")
     private String pointsFailed;
+    @Value("${kafka.topics.transaction-cancellation-failed}")
+    private String cancellationFailed;
+    @Value("${kafka.topics.transaction-cancellation-handled}")
+    private String cancellationHandled;
 
     private final MeterRegistry registry;
     private final Tracer tracer;
@@ -97,7 +103,7 @@ public class WalletService {
                 }
 
                 LocalDateTime redeemTimeStamp = LocalDateTime.now();
-                wallet.debit(cashbackToUse.amount());
+                wallet.debit(cashbackToUse.amount(), TransactionType.DEBIT);
 
                 WalletTransactionDomain redeemCashback = WalletTransactionDomain.createWalletTransaction(
                         wallet.getId().value(),
@@ -178,6 +184,90 @@ public class WalletService {
         } finally {
             span.end();
             timer.stop(registry.timer("wallet.credit.points.duration"));
+        }
+    }
+
+    @Transactional
+    public void cancelTransaction(UUID transactionId, CancelTransactionEventModel transactionModel) throws JsonProcessingException {
+        try {
+            WalletDomain wallet = findWalletByUserId(transactionModel.userId());
+            if (wallet.getStatus().equals(WalletStatus.BLOCKED))
+                throw new WalletBlockedException("Cant cancel transaction, wallet is blocked");
+
+            List<WalletTransactionDomain> history = getTransactionsHistory(transactionModel.userId());
+
+            Optional<WalletTransactionDomain> isCancelledTransactionPresent = history
+                    .stream()
+                    .filter(walletTrans -> walletTrans.getTransactionId().value().equals(transactionId) && walletTrans.getType().equals(TransactionType.CANCEL))
+                    .findAny();
+            if (isCancelledTransactionPresent.isPresent()) {
+                log.warn("Transaction already processed");
+                return;
+            }
+
+            Optional<WalletTransactionDomain> optionalWalletTransaction = history
+                    .stream()
+                    .filter(walletTrans -> walletTrans.getTransactionId().value().equals(transactionId))
+                    .findAny();
+            if (optionalWalletTransaction.isEmpty()) {
+                throw new WalletTransactionNotFound("Cant find wallet transaction [%s]".formatted(transactionId));
+            }
+
+            WalletTransactionDomain walletTransaction = optionalWalletTransaction.get();
+            Money oldTransactionAmount = walletTransaction.getAmount();
+            if (transactionModel.useCashback()) {
+                wallet.credit(oldTransactionAmount.amount());
+            } else {
+                wallet.debit(oldTransactionAmount.amount(), TransactionType.CANCEL);
+            }
+
+            WalletTransactionDomain refundedWalletTransaction = WalletTransactionDomain.createWalletTransaction(
+                    wallet.getId().value(),
+                    transactionId,
+                    oldTransactionAmount.amount(),
+                    TransactionType.CANCEL,
+                    LocalDateTime.now(),
+                    "Cancellation transaction - %s".formatted(transactionId)
+            );
+            walletTransactionRepository.save(walletTransactionMapper.domainToEntity(refundedWalletTransaction));
+            walletRepository.save(walletMapper.domainToEntity(wallet));
+
+            TransactionHandledEvent transactionHandledEvent = new TransactionHandledEvent(transactionId, transactionModel.userId());
+            OutboxEvent outboxEvent = buildOutboxEvent(transactionId, cancellationHandled, mapper.writeValueAsString(transactionHandledEvent));
+            outboxEventService.saveNewOutboxEvent(outboxEvent);
+        } catch (WalletNotFoundException e) {
+            CancellationFailedEvent failedEvent = new CancellationFailedEvent(
+                    transactionId,
+                    transactionModel.userId(),
+                    "Wallet for user - [%s] not found".formatted(transactionModel.userId()),
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent outboxEvent = buildOutboxEvent(transactionId, cancellationFailed, mapper.writeValueAsString(failedEvent));
+            outboxEventService.saveNewOutboxEvent(outboxEvent);
+        } catch (WalletTransactionNotFound e) {
+            CancellationFailedEvent failedEvent = new CancellationFailedEvent(
+                    transactionId,
+                    transactionModel.userId(),
+                    "Wallet transaction - [%s] not found".formatted(transactionId),
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent outboxEvent = buildOutboxEvent(transactionId, cancellationFailed, mapper.writeValueAsString(failedEvent));
+            outboxEventService.saveNewOutboxEvent(outboxEvent);
+        } catch (WalletBlockedException e) {
+            CancellationFailedEvent failedEvent = new CancellationFailedEvent(
+                    transactionId,
+                    transactionModel.userId(),
+                    "Wallet for user - [%s] blocked".formatted(transactionModel.userId()),
+                    LocalDateTime.now()
+            );
+
+            OutboxEvent outboxEvent = buildOutboxEvent(transactionId, cancellationFailed, mapper.writeValueAsString(failedEvent));
+            outboxEventService.saveNewOutboxEvent(outboxEvent);
+        } catch (Exception e) {
+            log.error("Unexpected error cancellation transaction [{}]: {}", transactionId, e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
