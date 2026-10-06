@@ -1,8 +1,9 @@
 package com.LoyaltyEngine.TransactionService.services.configs;
 
+import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
+import com.LoyaltyEngine.TransactionService.models.eventModels.CancellationFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.PointsFailedEvent;
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionHandledEvent;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
@@ -16,6 +17,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 
 import java.util.HashMap;
@@ -46,7 +48,7 @@ public class KafkaListenerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>(PointsFailedEvent.class, false)
+                new ErrorHandlingDeserializer<>(new JacksonJsonDeserializer<>(PointsFailedEvent.class, false))
         );
     }
 
@@ -54,6 +56,30 @@ public class KafkaListenerConfig {
     public ConcurrentKafkaListenerContainerFactory<UUID, PointsFailedEvent> pointsFailedEventConcurrentKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<UUID, PointsFailedEvent> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
         containerFactory.setConsumerFactory(pointsFailedEventConsumerFactory());
+        containerFactory.setCommonErrorHandler(errorHandler());
+
+        return containerFactory;
+    }
+
+    @Bean
+    public ConsumerFactory<UUID, CancellationFailedEvent> cancellationFailedEventConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+        props.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new UUIDDeserializer(),
+                new ErrorHandlingDeserializer<>(new JacksonJsonDeserializer<>(CancellationFailedEvent.class, false))
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<UUID, CancellationFailedEvent> cancellationFailedEventConcurrentKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<UUID, CancellationFailedEvent> containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
+        containerFactory.setConsumerFactory(cancellationFailedEventConsumerFactory());
         containerFactory.setCommonErrorHandler(errorHandler());
 
         return containerFactory;
@@ -70,7 +96,7 @@ public class KafkaListenerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new UUIDDeserializer(),
-                new JacksonJsonDeserializer<>(TransactionHandledEvent.class, false)
+                new ErrorHandlingDeserializer<>(new JacksonJsonDeserializer<>(TransactionHandledEvent.class, false))
         );
     }
 
@@ -90,15 +116,22 @@ public class KafkaListenerConfig {
         exponentialBackOffWithMaxRetries.setMultiplier(2);
         exponentialBackOffWithMaxRetries.setMaxInterval(4000L);
 
-        return new DefaultErrorHandler(
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
                 (consumer, ex) -> {
-                    log.error("Ошибка при отправке сообщения в топик {} : {}", consumer.topic(), ex.getMessage());
+                    log.error("Sent new message in {} : {}", consumer.topic(), ex.getMessage());
 
                     dlqKafkaTemplate.send(consumer.topic() + dlqSuffix, (UUID) consumer.key(), consumer.value());
 
-                    log.info("Отправлено сообщение в DLQ topic: {}", consumer.topic());
-                }
+                    log.info("Sent new message in DLQ topic: {}", consumer.topic() + dlqSuffix);
+                },
+                exponentialBackOffWithMaxRetries
         );
+        errorHandler.addNotRetryableExceptions(
+                TransactionNotFoundException.class,
+                IllegalArgumentException.class
+        );
+
+        return errorHandler;
     }
 
 }

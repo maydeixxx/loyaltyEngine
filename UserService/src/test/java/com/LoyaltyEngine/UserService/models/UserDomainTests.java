@@ -258,20 +258,6 @@ public class UserDomainTests {
     }
 
     @Test
-    @DisplayName("Обновление таймстампа")
-    void updateUpdatedAt() {
-        //given
-        UserDomain user = UserDomain.createUser("test@gmail.com", "John", "Doe", "pass");
-        LocalDateTime newTime = LocalDateTime.now().plusHours(1);
-
-        //when
-        user.updateUpdatedAt(newTime);
-
-        //then
-        Assertions.assertEquals(newTime, user.getUpdatedAt());
-    }
-
-    @Test
     @DisplayName("Сравнение пользователей")
     void userEqualsAndHashCode() {
         //given

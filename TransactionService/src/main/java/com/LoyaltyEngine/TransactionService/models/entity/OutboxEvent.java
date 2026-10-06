@@ -9,7 +9,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "outbox_events")
+@Table(name = "outbox_events", indexes = {
+        @Index(name = "idx_status_createdAt", columnList = "status, created_at")
+})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -21,16 +23,19 @@ public class OutboxEvent {
     @Column(nullable = false)
     private UUID aggregateId;
 
+    @Column(nullable = false)
     private String eventType;
     @Column(columnDefinition = "TEXT", nullable = false)
     private String payload;
 
+    private LocalDateTime processedAt;
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
     private OutboxStatus status;
+
     private int retryCount;
-    private LocalDateTime processedAt;
 
     @Override
     public boolean equals(Object o) {

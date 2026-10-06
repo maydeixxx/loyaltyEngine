@@ -4,7 +4,7 @@ import type { CashbackRuleDTO, CreateRulePayload, UpdateRulePayload } from '../t
 export const rulesApi = {
   // Admin: Get all cashback rules
   async getAllRules(): Promise<CashbackRuleDTO[]> {
-    const response = await api.get<CashbackRuleDTO[]>('/rules');
+    const response = await api.get<CashbackRuleDTO[]>('/rules/getRules');
     return response.data;
   },
 

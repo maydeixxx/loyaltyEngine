@@ -18,9 +18,16 @@ import java.util.UUID;
 public class CashbackRule {
     @Id
     private UUID id;
+
+    @Column(unique = true, nullable = false)
     private String category;
+
+    @Column(nullable = false)
     private BigDecimal percentage;
+
+    @Column(nullable = false)
     private LocalDateTime validFrom;
+    @Column(nullable = false)
     private LocalDateTime validTo;
 
     @Override

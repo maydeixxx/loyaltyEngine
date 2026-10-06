@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.UserService.services.interfaces;
 
-import com.LoyaltyEngine.UserService.models.User;
+import com.LoyaltyEngine.UserService.models.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

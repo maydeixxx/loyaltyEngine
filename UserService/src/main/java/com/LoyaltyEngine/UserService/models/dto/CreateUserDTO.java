@@ -2,7 +2,7 @@ package com.LoyaltyEngine.UserService.models.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import org.hibernate.validator.constraints.Length;
+import jakarta.validation.constraints.Size;
 
 public record CreateUserDTO(
         @NotBlank(message = "Email cant be blank")
@@ -16,6 +16,6 @@ public record CreateUserDTO(
         String lastName,
 
         @NotBlank(message = "Password cant be blank")
-        @Length(min = 8, message = "Minimal length of password is 8 symbols")
+        @Size(min = 8, max = 30, message = "Minimal length of password is 8 symbols")
         String password
 ) {}

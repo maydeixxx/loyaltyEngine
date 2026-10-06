@@ -215,10 +215,10 @@ public class UserControllerTests {
     void successfulUpdateUser() throws Exception {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("firstname", null, "UpdatedName", null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO("UpdatedName", null);
 
         //when && then
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/users/{email}", user.getEmail())
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/users/{email}", user.getEmail())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isNoContent());
@@ -228,14 +228,14 @@ public class UserControllerTests {
     }
 
     @Test
-    @DisplayName("Неуспешное обновление пользователя (тот же email)")
-    void unsuccessfulUpdateUserSameEmail() throws Exception {
+    @DisplayName("Неуспешное обновление пользователя (то же имя)")
+    void unsuccessfulUpdateUserSameFirstName() throws Exception {
         //given
         UserDomain user = userService.createUser(createUserDTO);
-        UpdateUserDTO updateDTO = new UpdateUserDTO("email", createUserDTO.email(), null, null, null, null);
+        UpdateUserDTO updateDTO = new UpdateUserDTO(createUserDTO.firstName(), null);
 
         //when && then
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/users/{email}", user.getEmail())
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/users/{email}", user.getEmail())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isBadRequest())

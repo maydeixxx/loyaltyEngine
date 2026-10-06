@@ -2,6 +2,8 @@ package com.LoyaltyEngine.WalletService.services;
 
 import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
+import com.LoyaltyEngine.WalletService.models.events.CancelTransactionEventModel;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -22,18 +24,17 @@ public class WalletConsumer {
             groupId = "wallet_service",
             containerFactory = "calculatedCashbackEventModelConcurrentKafkaListenerContainerFactory"
     )
-    private void handlePointsCalculatedEvent(ConsumerRecord<UUID, CalculatedCashbackEventModel> record, Acknowledgment ack) {
+    public void handlePointsCalculatedEvent(ConsumerRecord<UUID, CalculatedCashbackEventModel> record, Acknowledgment ack) {
         UUID transactionId = record.key();
         CalculatedCashbackEventModel model = record.value();
         UUID userId = model.userId();
 
         try {
             walletService.creditPoints(userId, transactionId, model.amount(), model.useCashback(), model.amountOfTransaction(), model.totalItemPrice());
-            ack.acknowledge();
-        } catch (Exception e) {
-            log.error("Error processing cashback for transaction {} : {}", transactionId, e.getMessage());
+        } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+        ack.acknowledge();
     }
 
     @KafkaListener(
@@ -54,6 +55,21 @@ public class WalletConsumer {
             log.warn("Wallet for user [{}] already created", userId);
         } catch (Exception e) {
             log.error("Error handling user created event: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.transaction-cancel}",
+            groupId = "wallet_service",
+            containerFactory = "cancelTransactionEventModelConcurrentKafkaListenerContainerFactory"
+    )
+    public void handleTransactionCancellation(ConsumerRecord<UUID, CancelTransactionEventModel> record) {
+        UUID transactionId = record.key();
+
+        try {
+            walletService.cancelTransaction(transactionId, record.value());
+        } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }

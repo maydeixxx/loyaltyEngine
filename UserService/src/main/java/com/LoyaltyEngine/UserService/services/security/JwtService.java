@@ -1,6 +1,6 @@
 package com.LoyaltyEngine.UserService.services.security;
 
-import com.LoyaltyEngine.UserService.models.User;
+import com.LoyaltyEngine.UserService.models.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

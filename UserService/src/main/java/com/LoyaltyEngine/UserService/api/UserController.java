@@ -1,20 +1,15 @@
 package com.LoyaltyEngine.UserService.api;
 
-import com.LoyaltyEngine.UserService.models.dto.AuthUserDto;
-import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
-import com.LoyaltyEngine.UserService.models.dto.UpdateUserDTO;
-import com.LoyaltyEngine.UserService.models.dto.UserDTO;
-import com.LoyaltyEngine.UserService.models.enums.Role;
+import com.LoyaltyEngine.UserService.models.dto.*;
+import com.LoyaltyEngine.UserService.services.AuthService;
 import com.LoyaltyEngine.UserService.services.UserService;
-import com.LoyaltyEngine.UserService.services.interfaces.UserMapper;
+import com.LoyaltyEngine.UserService.services.UserMapper;
 import com.LoyaltyEngine.UserService.services.security.UserSecurity;
-import io.micrometer.core.annotation.Timed;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +21,7 @@ import java.util.UUID;
 public class UserController {
     private final UserService userService;
     private final UserMapper userMapper;
+    private final AuthService authService;
 
     @PostMapping("/register")
     public ResponseEntity<UserDTO> registerUser(@RequestBody @Valid CreateUserDTO userDTO) {
@@ -35,7 +31,7 @@ public class UserController {
 
     @PostMapping("/auth")
     public ResponseEntity<String> authenticate(@RequestBody @Valid AuthUserDto userDto) {
-        String jwtToken = userService.login(userDto);
+        String jwtToken = authService.login(userDto);
         return ResponseEntity.ok(jwtToken);
     }
 
@@ -66,15 +62,29 @@ public class UserController {
 
     @DeleteMapping("/{email}")
     @PreAuthorize("hasRole('ADMIN') or authentication.principal.email == #email")
-    public ResponseEntity<?> deleteUser(@PathVariable String email) {
+    public ResponseEntity<Void> deleteUser(@PathVariable String email) {
         userService.deleteUser(email);
         return ResponseEntity.status(204).build();
     }
 
-    @PutMapping("/{email}")
+    @PatchMapping("/{email}")
     @PreAuthorize("hasRole('ADMIN') or authentication.principal.email == #email")
-    public ResponseEntity<?> updateUser(@PathVariable String email, @RequestBody @Valid UpdateUserDTO userDTO) {
+    public ResponseEntity<Void> updateUser(@PathVariable String email, @RequestBody @Valid UpdateUserDTO userDTO) {
         userService.updateUser(email, userDTO);
         return ResponseEntity.status(204).build();
+    }
+
+    @PostMapping("/updatePassword/{email}")
+    @PreAuthorize("hasRole('ADMIN') || authentication.principal.email == #email")
+    public ResponseEntity<Void> updatePassword(@RequestBody @Valid UpdatePasswordDTO updatePasswordDTO, @PathVariable String email) {
+        authService.updateUserPassword(email, updatePasswordDTO);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/updateEmail/{email}")
+    @PreAuthorize("hasRole('ADMIN') || authentication.principal.email == #email")
+    public ResponseEntity<String> updateEmail(@RequestBody @Valid UpdateEmailDTO updateEmailDTO, @PathVariable String email) {
+        String newToken = authService.updateEmail(email, updateEmailDTO);
+        return ResponseEntity.ok().body(newToken);
     }
 }

@@ -47,6 +47,7 @@ public class Transaction {
     @Column(nullable = false)
     private Status status;
 
+    @Column(nullable = false)
     private Boolean useCashbackBalance;
 
     public void addItem(TransactionItem item) {

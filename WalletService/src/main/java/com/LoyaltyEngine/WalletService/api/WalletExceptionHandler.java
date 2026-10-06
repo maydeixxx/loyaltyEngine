@@ -38,6 +38,12 @@ public class WalletExceptionHandler {
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
+    @ExceptionHandler(WalletTransactionNotFound.class)
+    public ResponseEntity<ErrorResponse> handleWalletTransactionNotFound(WalletTransactionNotFound ex, WebRequest request) {
+        ErrorResponse errorResponse = buildErrorResponse(404, "Wallet transaction not found", ex.getMessage(), request);
+        return ResponseEntity.status(errorResponse.code()).body(errorResponse);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validationExceptionError(MethodArgumentNotValidException ex, WebRequest request) {
         String errors = ex.getBindingResult()

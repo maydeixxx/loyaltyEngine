@@ -12,9 +12,8 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
-import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class KafkaListenerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new org.apache.kafka.common.serialization.UUIDDeserializer(),
-                new JacksonJsonDeserializer<>(TransactionCreatedEvent.class, false)
+                new ErrorHandlingDeserializer<>(new JacksonJsonDeserializer<>(TransactionCreatedEvent.class, false))
         );
     }
 
@@ -64,7 +63,7 @@ public class KafkaListenerConfig {
         backoff.setMultiplier(2.0);
         backoff.setMaxInterval(4000L);
 
-        return new DefaultErrorHandler(
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
                 (consumerRecord, e) -> {
                     log.error("Error handling message from topic {} :", consumerRecord.topic(), e);
 
@@ -76,6 +75,11 @@ public class KafkaListenerConfig {
                 },
                 backoff
         );
+        errorHandler.addNotRetryableExceptions(
+                IllegalStateException.class
+        );
+
+        return errorHandler;
     }
 
 

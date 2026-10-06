@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.RuleEngineService.services.interfaces;
+package com.LoyaltyEngine.RuleEngineService.services;
 
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRule;
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;

@@ -23,7 +23,7 @@ public class WalletTransaction {
 
     @Column(nullable = false)
     private UUID walletId;
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private UUID transactionId;
 
     @Column(nullable = false)

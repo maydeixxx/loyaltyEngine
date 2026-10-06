@@ -10,9 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: loyalty-frontend
     ports:
-      - "80:80"
-    depends_on:
-      - gateway-service
+      - "801:801"
     networks:
       - loyalty-network
     restart: always
@@ -46,11 +44,13 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - SPRING_DATA_REDIS_HOST=redis
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
       - management.tracing.export.zipkin.endpoint=http://zipkin:9411/api/v2/spans
     depends_on:
       - eureka-server
+      - redis
     networks:
       - loyalty-network
     restart: always

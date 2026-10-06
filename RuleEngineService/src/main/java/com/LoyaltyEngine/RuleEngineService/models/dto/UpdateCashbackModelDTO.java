@@ -1,18 +1,14 @@
 package com.LoyaltyEngine.RuleEngineService.models.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record UpdateCashbackModelDTO(
-        @NotNull(message = "You have to provide 'field to update'")
-        String fieldToUpdate,
-        @Size(min = 1, message = "Category cant be empty")
-        String category,
         @Positive(message = "percentage cant be negative")
+        @Min(value = 1, message = "New percentage cant be less than 1")
         BigDecimal percentage,
         LocalDateTime validTo
 )

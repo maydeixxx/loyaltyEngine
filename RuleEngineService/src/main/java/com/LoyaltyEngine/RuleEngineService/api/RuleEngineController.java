@@ -3,11 +3,11 @@ package com.LoyaltyEngine.RuleEngineService.api;
 import com.LoyaltyEngine.RuleEngineService.models.dto.CreateRuleDTO;
 import com.LoyaltyEngine.RuleEngineService.models.dto.UpdateCashbackModelDTO;
 import com.LoyaltyEngine.RuleEngineService.services.RuleEngineService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -21,20 +21,19 @@ public class RuleEngineController {
 
     @PostMapping()
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createCashbackRule(@RequestBody @Validated CreateRuleDTO dto) {
+    public ResponseEntity<?> createCashbackRule(@RequestBody @Valid CreateRuleDTO dto) {
         ruleEngineService.createCashbackRule(dto.category().toLowerCase(), dto.percentage(), dto.validFrom(), dto.validTo());
         return ResponseEntity.status(201).body(String.format("New rule by category %s successfully created!", dto.category()));
     }
 
-    @GetMapping()
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/getRules")
     public ResponseEntity<?> getAllRules() {
         return ResponseEntity.ok().body(ruleEngineService.getAllRules());
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateRule(@PathVariable UUID id, @RequestBody @Validated UpdateCashbackModelDTO dto) {
+    public ResponseEntity<?> updateRule(@PathVariable UUID id, @RequestBody @Valid UpdateCashbackModelDTO dto) {
         ruleEngineService.updateCashbackRule(dto, id);
         return ResponseEntity.ok().body(String.format("Rule %s successfully updated!", id));
     }

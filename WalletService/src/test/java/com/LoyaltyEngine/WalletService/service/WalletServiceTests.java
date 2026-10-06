@@ -1,14 +1,11 @@
 package com.LoyaltyEngine.WalletService.service;
 
-import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
-import com.LoyaltyEngine.WalletService.exceptions.WalletNotFoundException;
 import com.LoyaltyEngine.WalletService.models.domain.WalletDomain;
 import com.LoyaltyEngine.WalletService.models.domain.WalletTransactionDomain;
 import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.services.WalletService;
-import com.LoyaltyEngine.WalletService.services.interfaces.WalletMapper;
+import com.LoyaltyEngine.WalletService.services.WalletMapper;
 import com.LoyaltyEngine.WalletService.services.interfaces.WalletRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.f4b6a3.uuid.UuidCreator;
@@ -32,6 +29,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Disabled;
+
+@Disabled("Integration test requiring Docker environment")
 @SpringBootTest
 @Testcontainers
 @Transactional

@@ -1,12 +1,13 @@
-package com.LoyaltyEngine.GatewayService;
+package com.LoyaltyEngine.GatewayService.services;
 
+import com.LoyaltyEngine.GatewayService.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -15,15 +16,24 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class AuthFilter implements GlobalFilter, Ordered {
     private final JwtService jwtService;
 
+    private final List<String> patterns;
+    private final AntPathMatcher matcher = new AntPathMatcher();
+
+    public AuthFilter(JwtService jwtService, @Qualifier("allowedPaths") List<String> patterns) {
+        this.jwtService = jwtService;
+        this.patterns = patterns;
+    }
 
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
@@ -42,8 +52,10 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
             String path = request.getURI().getPath();
 
-            if (path.equals("/api/v1/users/auth") || path.equals("/api/v1/users/register")) {
-                return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
+            for (String pattern : patterns) {
+                if (matcher.match(pattern, path)) {
+                    return chain.filter(exchange.mutate().request(removedHeadersRequest).build());
+                }
             }
 
             String authorizationHeader;

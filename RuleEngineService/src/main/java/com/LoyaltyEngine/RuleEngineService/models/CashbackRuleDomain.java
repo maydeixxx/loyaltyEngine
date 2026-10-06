@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.RuleEngineService.models;
 
 import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackRuleValidationException;
+import com.LoyaltyEngine.RuleEngineService.exceptions.CashbackUpdateException;
 import com.LoyaltyEngine.RuleEngineService.models.valueObjects.RuleId;
 import lombok.*;
 
@@ -12,7 +13,7 @@ import java.util.UUID;
 @Getter
 public class CashbackRuleDomain {
     private final RuleId id;
-    private String category;
+    private final String category;
     private BigDecimal percentage;
     private final LocalDateTime validFrom;
     private LocalDateTime validTo;
@@ -60,18 +61,14 @@ public class CashbackRuleDomain {
         return new CashbackRuleDomain(new RuleId(ruleId), category, percentage, validFrom, validTo);
     }
 
-    public void updateCategory(String category) {
-        if (category == null || category.isBlank() || this.category.equals(category)) throw new IllegalArgumentException("Cant change category");
-        this.category = category;
-    }
-
     public void updatePercentage(BigDecimal percentage) {
-        if (percentage == null || this.percentage.equals(percentage) || percentage.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("Cant change percentage");
+        if (percentage == null || this.percentage.compareTo(percentage) == 0 || percentage.compareTo(BigDecimal.ONE) < 0) throw new CashbackUpdateException("Entered not valid new percentage");
         this.percentage = percentage;
     }
 
     public void updateValidTo(LocalDateTime newValidTo) {
-        if (newValidTo == null) throw new IllegalArgumentException("New valid to cant be null");
+        if (newValidTo == null) throw new CashbackUpdateException("New valid to cant be null");
+        if (newValidTo.isBefore(this.validFrom) || newValidTo.isBefore(LocalDateTime.now())) throw new CashbackUpdateException("New valid to is not valid");
         this.validTo = newValidTo;
     }
 

@@ -2,6 +2,10 @@ package com.LoyaltyEngine.RuleEngineService;
 
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;
 import com.LoyaltyEngine.RuleEngineService.models.dto.UpdateCashbackModelDTO;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
+import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionItemEvent;
+import com.LoyaltyEngine.RuleEngineService.services.CalculateCashbackService;
 import com.LoyaltyEngine.RuleEngineService.services.RuleEngineService;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Assertions;
@@ -20,6 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @SpringBootTest
@@ -47,6 +52,9 @@ public class RuleEngineServiceTests {
 
     @Autowired
     private RuleEngineService ruleEngineService;
+
+    @Autowired
+    private CalculateCashbackService calculateCashbackService;
 
     @Test
     @DisplayName("Успешное создание нового правила")
@@ -95,7 +103,7 @@ public class RuleEngineServiceTests {
         LocalDateTime validTo = LocalDateTime.now().plusDays(1);
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
-        UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO("category", "new", null, null);
+        UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO(new BigDecimal("15.0"), null);
         UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
 
         //when
@@ -103,8 +111,8 @@ public class RuleEngineServiceTests {
         CashbackRuleDomain updatedRule = ruleEngineService.getAllRules().getFirst();
 
         //then
-        Assertions.assertEquals("new", updatedRule.getCategory());
-        Assertions.assertEquals(new BigDecimal("12.5"), updatedRule.getPercentage());
+        Assertions.assertEquals("electronics", updatedRule.getCategory());
+        Assertions.assertEquals(new BigDecimal("15.0"), updatedRule.getPercentage());
     }
 
     @Test
@@ -117,17 +125,17 @@ public class RuleEngineServiceTests {
         LocalDateTime validTo = LocalDateTime.now().plusDays(1);
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
-
         //when
-        BigDecimal percentage1 = ruleEngineService.getPercentageForCategory("electronics");
+        Optional<BigDecimal> percentage1 = ruleEngineService.getPercentageForCategory("electronics");
 
         //then
-        Assertions.assertEquals(new BigDecimal("12.50"), percentage1);
+        Assertions.assertTrue(percentage1.isPresent());
+        Assertions.assertEquals(new BigDecimal("12.50"), percentage1.get());
     }
 
     @Test
-    @DisplayName("Получение базового процента для категории")
-    void getBasePercentageByCategory() {
+    @DisplayName("Категория без правила возвращает пустой Optional")
+    void getPercentageByUnknownCategoryReturnsEmpty() {
         //given
         String category = "electronics";
         BigDecimal percentage = new BigDecimal("12.5");
@@ -135,11 +143,45 @@ public class RuleEngineServiceTests {
         LocalDateTime validTo = LocalDateTime.now().plusDays(1);
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
-
         //when
-        BigDecimal percentage1 = ruleEngineService.getPercentageForCategory("cars");
+        Optional<BigDecimal> percentage1 = ruleEngineService.getPercentageForCategory("cars");
 
         //then
-        Assertions.assertEquals(new BigDecimal("1.0"), percentage1);
+        Assertions.assertTrue(percentage1.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Расчет кэшбека через CalculateCashbackService: категория + дефолт")
+    void calculateCashback_mixedItems_calculatesCorrectCashback() {
+        //given
+        String category = "electronics";
+        BigDecimal percentage = new BigDecimal("10.0");
+        LocalDateTime validFrom = LocalDateTime.now();
+        LocalDateTime validTo = LocalDateTime.now().plusDays(1);
+        ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
+
+        UUID transactionId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        // 1000 * 10% = 100.00
+        TransactionItemEvent itemWithCategory = new TransactionItemEvent("electronics", "Phone", new BigDecimal("1000.00"));
+        // 500 * 1% (дефолт) = 5.00
+        TransactionItemEvent itemWithoutCategory = new TransactionItemEvent(null, "Book", new BigDecimal("500.00"));
+
+        TransactionCreatedEvent transaction = new TransactionCreatedEvent(
+                transactionId,
+                userId,
+                new BigDecimal("1500.00"),
+                List.of(itemWithCategory, itemWithoutCategory),
+                LocalDateTime.now(),
+                false
+        );
+
+        //when
+        CalculatedCashbackEventModel result = calculateCashbackService.calculateCashback(transaction, transactionId);
+
+        //then
+        Assertions.assertEquals(new BigDecimal("105.00"), result.amount());
+        Assertions.assertEquals(new BigDecimal("1500.00"), result.totalItemPrice());
     }
 }

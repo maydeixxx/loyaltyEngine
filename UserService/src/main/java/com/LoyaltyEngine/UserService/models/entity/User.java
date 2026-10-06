@@ -1,4 +1,4 @@
-package com.LoyaltyEngine.UserService.models;
+package com.LoyaltyEngine.UserService.models.entity;
 
 import com.LoyaltyEngine.UserService.models.enums.Role;
 import jakarta.persistence.*;

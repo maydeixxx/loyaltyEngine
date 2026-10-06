@@ -2,6 +2,7 @@ package com.LoyaltyEngine.WalletService.models.domain;
 
 import com.LoyaltyEngine.WalletService.exceptions.InsufficientFundsException;
 import com.LoyaltyEngine.WalletService.exceptions.WalletBlockedException;
+import com.LoyaltyEngine.WalletService.models.enums.TransactionType;
 import com.LoyaltyEngine.WalletService.models.enums.WalletStatus;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.WalletService.models.domain.valueObjects.UserId;
@@ -62,12 +63,6 @@ public class WalletDomain {
         updateUpdatedAt(LocalDateTime.now());
     }
 
-    public void suspendWallet() {
-        if (this.status.equals(WalletStatus.SUSPENDED)) throw new IllegalArgumentException("Wallet already suspended");
-        this.status = WalletStatus.SUSPENDED;
-        updateUpdatedAt(LocalDateTime.now());
-    }
-
     public void updateUpdatedAt(LocalDateTime time) {
         if (time == null) {
             throw new IllegalArgumentException("New time cant be null");
@@ -81,9 +76,9 @@ public class WalletDomain {
         updateUpdatedAt(LocalDateTime.now());
     }
 
-    public void debit(BigDecimal amount) {
+    public void debit(BigDecimal amount, TransactionType type) {
         if (!this.status.equals(WalletStatus.ACTIVE)) throw new WalletBlockedException("Wallet isn`t active");
-        if (this.balance.isLessThan(new Money(amount))) throw new InsufficientFundsException("Insufficient funds");
+        if (this.balance.isLessThan(new Money(amount)) && !type.equals(TransactionType.CANCEL)) throw new InsufficientFundsException("Insufficient funds");
         this.balance = this.balance.subtract(new Money(amount));
         updateUpdatedAt(LocalDateTime.now());
     }

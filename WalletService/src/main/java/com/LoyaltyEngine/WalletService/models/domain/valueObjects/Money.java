@@ -8,7 +8,6 @@ public record Money(BigDecimal amount) {
 
     public Money {
         Objects.requireNonNull(amount, "Amount cant be null");
-        if (amount.compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException("Amount cant be less than zero");
         amount = amount.setScale(2, RoundingMode.HALF_EVEN);
     }
 
@@ -30,6 +29,10 @@ public record Money(BigDecimal amount) {
 
     public boolean isLessThan(Money money) {
         return this.amount.compareTo(money.amount) < 0;
+    }
+
+    public boolean isZero() {
+        return this.amount.compareTo(BigDecimal.ZERO) == 0;
     }
 
 }

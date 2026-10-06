@@ -1,6 +1,6 @@
-package com.LoyaltyEngine.UserService.services.interfaces;
+package com.LoyaltyEngine.UserService.services;
 
-import com.LoyaltyEngine.UserService.models.User;
+import com.LoyaltyEngine.UserService.models.entity.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.UserDTO;
 import org.springframework.stereotype.Component;
