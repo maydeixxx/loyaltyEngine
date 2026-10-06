@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     first_name varchar(255) NOT NULL,
     last_name varchar(255) NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP NOT NULL
 );
 
-CREATE TABLE outbox_events (
+CREATE TABLE IF NOT EXISTS outbox_events (
     id UUID PRIMARY KEY,
     aggregate_id UUID NOT NULL,
     created_at TIMESTAMP NOT NULL,
@@ -20,4 +20,4 @@ CREATE TABLE outbox_events (
     retry_count INT NOT NULL DEFAULT 0
 );
 
-CREATE INDEX idx_outbox_event_status_created_at ON outbox_events(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_event_status_created_at ON outbox_events(status, created_at);

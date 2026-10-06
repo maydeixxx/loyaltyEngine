@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Sparkles,
   TrendingUp,
+  RotateCcw,
 } from 'lucide-react';
 
 export const WalletPage: React.FC = () => {
@@ -133,14 +134,23 @@ export const WalletPage: React.FC = () => {
 
             <div className="pt-2">
               <span className="text-[11px] uppercase tracking-widest text-white/50 block font-medium">
-                Текущие накопления
+                {balance !== null && balance < 0 ? 'Задолженность по баллам' : 'Текущие накопления'}
               </span>
               <div className="flex items-baseline space-x-3 mt-1">
-                <span className="text-4xl sm:text-6xl font-bold tracking-tight text-white font-sans drop-shadow-md">
+                <span
+                  className={`text-4xl sm:text-6xl font-bold tracking-tight font-sans drop-shadow-md ${
+                    balance !== null && balance < 0 ? 'text-[#ff453a]' : 'text-white'
+                  }`}
+                >
                   {balance !== null ? balance.toLocaleString('ru-RU', { minimumFractionDigits: 2 }) : '0.00'}
                 </span>
                 <span className="text-xl sm:text-2xl font-light text-white/60">баллов</span>
               </div>
+              {balance !== null && balance < 0 && (
+                <span className="text-[10px] text-[#ff453a]/90 font-medium block mt-1.5">
+                  ⚠️ Отрицательный баланс после возврата покупки. Будет погашен будущими начислениями.
+                </span>
+              )}
             </div>
           </div>
 
@@ -294,14 +304,28 @@ export const WalletPage: React.FC = () => {
                     className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
                       item.type === 'CREDIT'
                         ? 'bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/20'
+                        : item.type === 'CANCEL'
+                        ? 'bg-[#ff9f0a]/15 text-[#ff9f0a] border border-[#ff9f0a]/20'
                         : 'bg-[#ff453a]/15 text-[#ff453a] border border-[#ff453a]/20'
                     }`}
                   >
-                    {item.type === 'CREDIT' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                    {item.type === 'CREDIT' ? (
+                      <ArrowDownLeft className="w-5 h-5" />
+                    ) : item.type === 'CANCEL' ? (
+                      <RotateCcw className="w-5 h-5" />
+                    ) : (
+                      <ArrowUpRight className="w-5 h-5" />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <div className="font-medium text-white text-xs sm:text-sm truncate">
-                      {item.description || (item.type === 'CREDIT' ? 'Начисление кэшбэка' : 'Оплата баллами')}
+                      {item.description || (
+                        item.type === 'CREDIT'
+                          ? 'Начисление кэшбэка'
+                          : item.type === 'CANCEL'
+                          ? 'Отмена покупки / Корректировка'
+                          : 'Оплата баллами'
+                      )}
                     </div>
                     <div className="text-[11px] text-white/40 mt-0.5">
                       {new Date(item.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} • {new Date(item.createdAt).toLocaleDateString('ru-RU')}
@@ -311,10 +335,14 @@ export const WalletPage: React.FC = () => {
 
                 <div
                   className={`font-semibold text-sm sm:text-base flex-shrink-0 pl-2 font-mono ${
-                    item.type === 'CREDIT' ? 'text-[#30d158]' : 'text-white/80'
+                    item.type === 'CREDIT'
+                      ? 'text-[#30d158]'
+                      : item.type === 'CANCEL'
+                      ? 'text-[#ff9f0a]'
+                      : 'text-white/80'
                   }`}
                 >
-                  {item.type === 'CREDIT' ? '+' : '-'}
+                  {item.type === 'CREDIT' ? '+' : item.type === 'CANCEL' ? '↺ ' : '-'}
                   {Number(item.amount).toFixed(2)}
                   <span className="text-xs font-normal text-white/50 ml-1">₽</span>
                 </div>

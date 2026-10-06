@@ -22,6 +22,7 @@ import {
   Shirt,
   X,
   Coins,
+  RotateCcw,
 } from 'lucide-react';
 
 interface CatalogProduct {
@@ -123,6 +124,9 @@ export const CheckoutPage: React.FC = () => {
 
   // Selected Transaction for receipt modal
   const [selectedTx, setSelectedTx] = useState<TransactionDTO | null>(null);
+  const [cancellingTxId, setCancellingTxId] = useState<string | null>(null);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
+  const [cancelErrorMsg, setCancelErrorMsg] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async () => {
     if (!userId) return;
@@ -353,6 +357,39 @@ export const CheckoutPage: React.FC = () => {
       setTxError(typeof msg === 'string' ? msg : 'Ошибка при оформлении покупки');
     } finally {
       setSubmittingTx(false);
+    }
+  };
+
+  // Handle Cancel / Refund of transaction
+  const handleCancelTransaction = async (txId: string) => {
+    if (!userId) return;
+    if (!window.confirm('Оформить возврат по чеку? Начисленный кэшбэк будет аннулирован, а списанные баллы возвращены на счет.')) {
+      return;
+    }
+
+    setCancellingTxId(txId);
+    setCancelErrorMsg(null);
+    setCancelSuccessMsg(null);
+
+    try {
+      await transactionApi.cancelTransaction(txId, userId);
+      setCancelSuccessMsg('Возврат успешно оформлен! Чек аннулирован.');
+      if (selectedTx && selectedTx.id === txId) {
+        setSelectedTx({ ...selectedTx, status: 'CANCELLED' });
+      }
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === txId ? { ...t, status: 'CANCELLED' } : t))
+      );
+      setTimeout(() => {
+        fetchBalance();
+        fetchTransactions();
+      }, 1000);
+    } catch (err: any) {
+      console.error('Failed to cancel transaction:', err);
+      const msg = err.response?.data?.message || err.message || 'Ошибка при оформлении возврата';
+      setCancelErrorMsg(typeof msg === 'string' ? msg : 'Не удалось отменить транзакцию');
+    } finally {
+      setCancellingTxId(null);
     }
   };
 
@@ -823,12 +860,21 @@ export const CheckoutPage: React.FC = () => {
                 transactions.slice(0, 5).map((tx) => (
                   <div
                     key={tx.id}
-                    onClick={() => setSelectedTx(tx)}
+                    onClick={() => {
+                      setSelectedTx(tx);
+                      setCancelErrorMsg(null);
+                      setCancelSuccessMsg(null);
+                    }}
                     className="py-2.5 px-2 -mx-2 rounded-xl hover:bg-white/[0.04] cursor-pointer flex items-center justify-between text-xs transition"
                   >
                     <div className="min-w-0">
-                      <div className="font-medium text-white truncate text-xs">
-                        Чек #{tx.id.substring(0, 8)}
+                      <div className="font-medium text-white truncate text-xs flex items-center space-x-1.5">
+                        <span>Чек #{tx.id.substring(0, 8)}</span>
+                        {tx.status === 'CANCELLED' && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#ff453a]/20 text-[#ff453a] font-medium border border-[#ff453a]/30">
+                            Возврат
+                          </span>
+                        )}
                       </div>
                       <div className="text-[10px] text-white/40">
                         {new Date(tx.createdAt).toLocaleDateString('ru-RU', {
@@ -840,7 +886,9 @@ export const CheckoutPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right flex items-center space-x-1.5 flex-shrink-0">
-                      <span className="font-semibold text-white">{Number(tx.amount).toFixed(2)} ₽</span>
+                      <span className={`font-semibold ${tx.status === 'CANCELLED' ? 'text-white/40 line-through' : 'text-white'}`}>
+                        {Number(tx.amount).toFixed(2)} ₽
+                      </span>
                       <ChevronRight className="w-3.5 h-3.5 text-white/30" />
                     </div>
                   </div>
@@ -874,9 +922,20 @@ export const CheckoutPage: React.FC = () => {
                   <span>ID транзакции:</span>
                   <span className="text-white font-medium">{selectedTx.id.substring(0, 16)}...</span>
                 </div>
-                <div className="flex justify-between text-white/50">
+                <div className="flex justify-between items-center text-white/50">
                   <span>Статус:</span>
-                  <span className="font-semibold text-[#30d158]">{selectedTx.status}</span>
+                  {selectedTx.status === 'PROCESSED' || selectedTx.status === 'HANDLED' ? (
+                    <span className="font-semibold text-[#30d158] bg-[#30d158]/10 px-2 py-0.5 rounded-md border border-[#30d158]/20 text-[10px]">
+                      ОПЛАЧЕН
+                    </span>
+                  ) : selectedTx.status === 'CANCELLED' ? (
+                    <span className="font-semibold text-[#ff453a] bg-[#ff453a]/10 px-2 py-0.5 rounded-md border border-[#ff453a]/20 text-[10px] flex items-center space-x-1">
+                      <RotateCcw className="w-2.5 h-2.5" />
+                      <span>АННУЛИРОВАН</span>
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-white/70">{selectedTx.status}</span>
+                  )}
                 </div>
               </div>
 
@@ -899,8 +958,49 @@ export const CheckoutPage: React.FC = () => {
 
               <div className="pt-3 border-t border-white/[0.08] flex justify-between items-baseline font-semibold text-white">
                 <span className="text-white/60">Итого:</span>
-                <span className="text-lg text-[#2997ff]">{Number(selectedTx.amount).toFixed(2)} ₽</span>
+                <span className={`text-lg ${selectedTx.status === 'CANCELLED' ? 'text-white/40 line-through' : 'text-[#2997ff]'}`}>
+                  {Number(selectedTx.amount).toFixed(2)} ₽
+                </span>
               </div>
+
+              {/* Refund Action and Feedback */}
+              {(selectedTx.status === 'PROCESSED' || selectedTx.status === 'HANDLED') && (
+                <div className="space-y-2 pt-2 border-t border-white/[0.08]">
+                  {cancelErrorMsg && (
+                    <div className="p-2.5 rounded-xl bg-[#ff453a]/15 text-[#ff453a] text-[11px] flex items-center space-x-1.5 border border-[#ff453a]/20">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{cancelErrorMsg}</span>
+                    </div>
+                  )}
+                  {cancelSuccessMsg && (
+                    <div className="p-2.5 rounded-xl bg-[#30d158]/15 text-[#30d158] text-[11px] flex items-center space-x-1.5 border border-[#30d158]/20">
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{cancelSuccessMsg}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleCancelTransaction(selectedTx.id)}
+                    disabled={cancellingTxId === selectedTx.id}
+                    className="w-full py-2.5 bg-[#ff453a]/15 hover:bg-[#ff453a]/25 active:scale-[0.98] text-[#ff453a] font-medium rounded-full text-xs transition border border-[#ff453a]/30 flex items-center justify-center space-x-2"
+                  >
+                    {cancellingTxId === selectedTx.id ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Оформить возврат (отмена чека)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {selectedTx.status === 'CANCELLED' && (
+                <div className="p-2.5 bg-white/[0.04] rounded-xl text-[10px] text-white/50 flex items-center space-x-1.5 border border-white/10">
+                  <RotateCcw className="w-3.5 h-3.5 flex-shrink-0 text-[#ff453a]" />
+                  <span>Чек аннулирован. Кэшбэк отозван или баллы возвращены на счет.</span>
+                </div>
+              )}
             </div>
 
             <div className="pt-2">

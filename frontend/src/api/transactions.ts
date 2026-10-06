@@ -33,4 +33,12 @@ export const transactionApi = {
     const response = await api.get<TransactionDTO>(`/transactions/${id}`);
     return response.data;
   },
+
+  // Cancel / Refund a transaction
+  async cancelTransaction(transactionId: string, userId: string): Promise<void> {
+    await api.put('/transactions/cancel', {
+      transactionId,
+      userId,
+    });
+  },
 };
