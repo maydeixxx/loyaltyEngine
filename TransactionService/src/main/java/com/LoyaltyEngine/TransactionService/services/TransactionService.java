@@ -209,6 +209,7 @@ public class TransactionService {
             );
 
             OutboxEvent event = OutboxEvent.builder()
+                    .id(UuidCreator.getTimeOrderedEpoch())
                     .eventType(cancelTransactionTopic)
                     .aggregateId(transactionId)
                     .payload(mapper.writeValueAsString(eventModel))

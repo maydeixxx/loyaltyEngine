@@ -1,4 +1,4 @@
-CREATE TABLE wallets (
+CREATE TABLE IF NOT EXISTS wallets (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE,
     balance DECIMAL(19, 2) NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE wallets (
     updated_at TIMESTAMP NOT NULL
 );
 
-CREATE TABLE wallet_transactions (
+CREATE TABLE IF NOT EXISTS wallet_transactions (
     id UUID PRIMARY KEY,
     wallet_id UUID NOT NULL,
     transaction_id UUID NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE wallet_transactions (
     description varchar(255) NOT NULL
 );
 
-CREATE TABLE outbox_events (
+CREATE TABLE IF NOT EXISTS outbox_events (
     id UUID PRIMARY KEY,
     aggregate_id UUID NOT NULL,
     event_type varchar(255) NOT NULL,
@@ -29,5 +29,5 @@ CREATE TABLE outbox_events (
     processed_at TIMESTAMP
 );
 
-CREATE INDEX idx_outbox_event_status_created_at ON outbox_events(status, created_at);
-CREATE INDEX idx_wallet_transactions_wallet_id ON wallet_transactions(wallet_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_event_status_created_at ON outbox_events(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet_id ON wallet_transactions(wallet_id);

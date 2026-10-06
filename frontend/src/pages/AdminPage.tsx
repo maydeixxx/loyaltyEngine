@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Calendar,
   X,
+  RotateCcw,
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
@@ -44,6 +45,9 @@ export const AdminPage: React.FC = () => {
   const [searchedTx, setSearchedTx] = useState<TransactionDTO | null>(null);
   const [searchingTx, setSearchingTx] = useState(false);
   const [searchTxError, setSearchTxError] = useState<string | null>(null);
+  const [cancellingTxId, setCancellingTxId] = useState<string | null>(null);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
+  const [cancelErrorMsg, setCancelErrorMsg] = useState<string | null>(null);
 
   // Load Rules
   const loadRules = async () => {
@@ -159,6 +163,8 @@ export const AdminPage: React.FC = () => {
     if (!searchTxId.trim()) return;
     setSearchTxError(null);
     setSearchedTx(null);
+    setCancelErrorMsg(null);
+    setCancelSuccessMsg(null);
     setSearchingTx(true);
 
     try {
@@ -168,6 +174,30 @@ export const AdminPage: React.FC = () => {
       setSearchTxError('Транзакция с таким UUID не найдена');
     } finally {
       setSearchingTx(false);
+    }
+  };
+
+  // Admin Cancel Transaction
+  const handleAdminCancelTx = async () => {
+    if (!searchedTx) return;
+    if (!window.confirm(`Вы уверены, что хотите аннулировать чек ${searchedTx.id}? Начисленный кэшбэк пользователя (${searchedTx.userId}) будет списан, а потраченные баллы возвращены.`)) {
+      return;
+    }
+
+    setCancellingTxId(searchedTx.id);
+    setCancelErrorMsg(null);
+    setCancelSuccessMsg(null);
+
+    try {
+      await transactionApi.cancelTransaction(searchedTx.id, searchedTx.userId);
+      setCancelSuccessMsg('Возврат успешно оформлен администратором. Чек аннулирован.');
+      setSearchedTx({ ...searchedTx, status: 'CANCELLED' });
+    } catch (err: any) {
+      console.error('Failed to cancel transaction by admin:', err);
+      const msg = err.response?.data?.message || err.message || 'Ошибка отмены транзакции';
+      setCancelErrorMsg(typeof msg === 'string' ? msg : 'Не удалось отменить транзакцию');
+    } finally {
+      setCancellingTxId(null);
     }
   };
 
@@ -461,9 +491,20 @@ export const AdminPage: React.FC = () => {
             <div className="p-6 bg-white/[0.03] border border-white/10 rounded-2xl space-y-4 text-xs">
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
                 <div className="font-mono font-semibold text-white">ID: {searchedTx.id}</div>
-                <span className="px-3 py-1 bg-[#2997ff]/15 text-[#2997ff] border border-[#2997ff]/30 font-medium rounded-full text-[11px]">
-                  {searchedTx.status}
-                </span>
+                {searchedTx.status === 'PROCESSED' || searchedTx.status === 'HANDLED' ? (
+                  <span className="px-3 py-1 bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/30 font-medium rounded-full text-[11px]">
+                    {searchedTx.status}
+                  </span>
+                ) : searchedTx.status === 'CANCELLED' ? (
+                  <span className="px-3 py-1 bg-[#ff453a]/15 text-[#ff453a] border border-[#ff453a]/30 font-medium rounded-full text-[11px] flex items-center space-x-1.5">
+                    <RotateCcw className="w-3 h-3" />
+                    <span>АННУЛИРОВАН</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-[#2997ff]/15 text-[#2997ff] border border-[#2997ff]/30 font-medium rounded-full text-[11px]">
+                    {searchedTx.status}
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -473,7 +514,9 @@ export const AdminPage: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-white/40 block text-[10px] uppercase tracking-wider">Сумма покупки:</span>
-                  <span className="font-bold text-white text-sm">{searchedTx.amount} ₽</span>
+                  <span className={`font-bold text-sm ${searchedTx.status === 'CANCELLED' ? 'text-white/40 line-through' : 'text-white'}`}>
+                    {searchedTx.amount} ₽
+                  </span>
                 </div>
                 <div>
                   <span className="text-white/40 block text-[10px] uppercase tracking-wider">Дата создания:</span>
@@ -497,6 +540,45 @@ export const AdminPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Admin Refund Action */}
+              {(searchedTx.status === 'PROCESSED' || searchedTx.status === 'HANDLED') && (
+                <div className="pt-4 border-t border-white/[0.08] space-y-3">
+                  {cancelErrorMsg && (
+                    <div className="p-3 bg-[#ff453a]/15 border border-[#ff453a]/30 text-[#ff453a] text-xs rounded-xl flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{cancelErrorMsg}</span>
+                    </div>
+                  )}
+                  {cancelSuccessMsg && (
+                    <div className="p-3 bg-[#30d158]/15 border border-[#30d158]/30 text-[#30d158] text-xs rounded-xl flex items-center space-x-2">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                      <span>{cancelSuccessMsg}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleAdminCancelTx}
+                    disabled={cancellingTxId === searchedTx.id}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-[#ff453a]/15 hover:bg-[#ff453a]/25 text-[#ff453a] border border-[#ff453a]/30 font-medium rounded-xl text-xs transition flex items-center justify-center space-x-2 active:scale-[0.98]"
+                  >
+                    {cancellingTxId === searchedTx.id ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Оформить возврат (отмена транзакции)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {searchedTx.status === 'CANCELLED' && (
+                <div className="p-3 bg-white/[0.03] border border-white/10 rounded-xl text-[11px] text-white/50 flex items-center space-x-2">
+                  <RotateCcw className="w-3.5 h-3.5 text-[#ff453a] flex-shrink-0" />
+                  <span>Транзакция аннулирована. Все начисления и списания скорректированы.</span>
+                </div>
+              )}
             </div>
           )}
         </div>

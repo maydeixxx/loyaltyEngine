@@ -15,7 +15,7 @@ export interface JWTPayload {
   iat: number;
 }
 
-export type TransactionType = 'CREDIT' | 'DEBIT';
+export type TransactionType = 'CREDIT' | 'DEBIT' | 'CANCEL';
 
 export interface WalletTransactionDTO {
   id: string;
@@ -45,6 +45,21 @@ export interface CreateTransactionPayload {
   useCashbackBalance: boolean;
 }
 
+export interface CancelTransactionPayload {
+  transactionId: string;
+  userId: string;
+}
+
+export type TransactionStatus =
+  | 'NEW'
+  | 'PROCESSED'
+  | 'PENDING'
+  | 'HANDLED'
+  | 'REJECTED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | string;
+
 export interface TransactionDTO {
   id: string;
   userId: string;
@@ -52,7 +67,7 @@ export interface TransactionDTO {
   amount: number;
   items: TransactionItemDTO[];
   createdAt: string;
-  status: 'NEW' | 'PENDING' | 'HANDLED' | 'FAILED' | 'REJECTED' | string;
+  status: TransactionStatus;
 }
 
 export interface CashbackRuleDTO {

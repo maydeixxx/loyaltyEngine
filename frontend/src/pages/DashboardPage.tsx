@@ -22,6 +22,7 @@ import {
   Calculator,
   Info,
   ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 
 interface CatalogProduct {
@@ -86,6 +87,18 @@ export const DashboardPage: React.FC = () => {
 
   // Selected Transaction for receipt modal
   const [selectedTx, setSelectedTx] = useState<TransactionDTO | null>(null);
+
+  // Cancellation state
+  const [cancellingTxId, setCancellingTxId] = useState<string | null>(null);
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
+  const [cancelErrorMsg, setCancelErrorMsg] = useState<string | null>(null);
+
+  // Open modal and reset msgs
+  const openTxModal = (tx: TransactionDTO) => {
+    setSelectedTx(tx);
+    setCancelSuccessMsg(null);
+    setCancelErrorMsg(null);
+  };
 
   // Fetch balance
   const fetchBalance = useCallback(async () => {
@@ -292,6 +305,37 @@ export const DashboardPage: React.FC = () => {
       setTxError(typeof msg === 'string' ? msg : 'Ошибка при оформлении транзакции');
     } finally {
       setSubmittingTx(false);
+    }
+  };
+
+  // Handle Cancel / Refund of transaction
+  const handleCancelTransaction = async (txId: string) => {
+    if (!userId) return;
+    if (!window.confirm('Оформить возврат по чеку? Начисленный кэшбэк будет аннулирован, а списанные баллы возвращены на счет.')) {
+      return;
+    }
+
+    setCancellingTxId(txId);
+    setCancelErrorMsg(null);
+    setCancelSuccessMsg(null);
+
+    try {
+      await transactionApi.cancelTransaction(txId, userId);
+      setCancelSuccessMsg('Возврат успешно оформлен!');
+      if (selectedTx && selectedTx.id === txId) {
+        setSelectedTx({ ...selectedTx, status: 'CANCELLED' });
+      }
+      setTimeout(() => {
+        fetchBalance();
+        fetchHistory();
+        fetchTransactions();
+      }, 1000);
+    } catch (err: any) {
+      console.error('Failed to cancel transaction:', err);
+      const msg = err.response?.data?.message || err.message || 'Ошибка при оформлении возврата';
+      setCancelErrorMsg(typeof msg === 'string' ? msg : 'Не удалось отменить транзакцию');
+    } finally {
+      setCancellingTxId(null);
     }
   };
 
@@ -722,14 +766,24 @@ export const DashboardPage: React.FC = () => {
                     <div className="flex items-center space-x-3 min-w-0">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          item.type === 'CREDIT' ? 'bg-[#34c759]/10 text-[#34c759]' : 'bg-[#ff3b30]/10 text-[#ff3b30]'
+                          item.type === 'CREDIT'
+                            ? 'bg-[#34c759]/10 text-[#34c759]'
+                            : item.type === 'CANCEL'
+                            ? 'bg-[#ff9500]/10 text-[#ff9500]'
+                            : 'bg-[#ff3b30]/10 text-[#ff3b30]'
                         }`}
                       >
-                        {item.type === 'CREDIT' ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                        {item.type === 'CREDIT' ? (
+                          <ArrowDownLeft className="w-3.5 h-3.5" />
+                        ) : item.type === 'CANCEL' ? (
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        )}
                       </div>
                       <div className="min-w-0">
                         <div className="font-medium text-[#1d1d1f] truncate text-[11px] sm:text-xs">
-                          {item.description || (item.type === 'CREDIT' ? 'Кэшбэк' : 'Списание')}
+                          {item.description || (item.type === 'CREDIT' ? 'Кэшбэк' : item.type === 'CANCEL' ? 'Возврат / Корректировка' : 'Списание')}
                         </div>
                         <div className="text-[10px] text-[#86868b]">
                           {new Date(item.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} • {new Date(item.createdAt).toLocaleDateString('ru-RU')}
@@ -739,10 +793,14 @@ export const DashboardPage: React.FC = () => {
 
                     <div
                       className={`font-semibold text-xs sm:text-sm flex-shrink-0 pl-2 ${
-                        item.type === 'CREDIT' ? 'text-[#34c759]' : 'text-[#ff3b30]'
+                        item.type === 'CREDIT'
+                          ? 'text-[#34c759]'
+                          : item.type === 'CANCEL'
+                          ? 'text-[#ff9500]'
+                          : 'text-[#ff3b30]'
                       }`}
                     >
-                      {item.type === 'CREDIT' ? '+' : '-'}
+                      {item.type === 'CREDIT' ? '+' : item.type === 'CANCEL' ? '↺ ' : '-'}
                       {Number(item.amount).toFixed(2)}
                     </div>
                   </div>
@@ -772,7 +830,7 @@ export const DashboardPage: React.FC = () => {
                 transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    onClick={() => setSelectedTx(tx)}
+                    onClick={() => openTxModal(tx)}
                     className="py-3 px-2 -mx-2 rounded-2xl hover:bg-black/[0.02] cursor-pointer flex items-center justify-between text-xs transition-colors duration-150"
                   >
                     <div className="flex items-center space-x-3 min-w-0">
@@ -794,14 +852,22 @@ export const DashboardPage: React.FC = () => {
                         <div className="font-semibold text-[#1d1d1f] text-xs font-sans">{Number(tx.amount).toFixed(2)} ₽</div>
                         <span
                           className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-medium ${
-                            tx.status === 'HANDLED'
+                            tx.status === 'HANDLED' || tx.status === 'PROCESSED'
                               ? 'bg-[#34c759]/10 text-[#34c759]'
-                              : tx.status === 'FAILED'
+                              : tx.status === 'CANCELLED'
+                              ? 'bg-black/[0.06] text-[#86868b]'
+                              : tx.status === 'FAILED' || tx.status === 'REJECTED'
                               ? 'bg-[#ff3b30]/10 text-[#ff3b30]'
                               : 'bg-[#ff9500]/10 text-[#ff9500]'
                           }`}
                         >
-                          {tx.status}
+                          {tx.status === 'PROCESSED' || tx.status === 'HANDLED'
+                            ? 'Оплачен'
+                            : tx.status === 'CANCELLED'
+                            ? 'Возврат'
+                            : tx.status === 'REJECTED'
+                            ? 'Отклонён'
+                            : tx.status}
                         </span>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-[#86868b]" />
@@ -836,9 +902,27 @@ export const DashboardPage: React.FC = () => {
                     <span>ID:</span>
                     <span className="text-[#1d1d1f] font-medium">{selectedTx.id.substring(0, 16)}...</span>
                   </div>
-                  <div className="flex justify-between text-[#86868b]">
+                  <div className="flex justify-between text-[#86868b] items-center">
                     <span>Статус:</span>
-                    <span className="font-medium text-[#0071e3]">{selectedTx.status}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
+                        selectedTx.status === 'PROCESSED' || selectedTx.status === 'HANDLED'
+                          ? 'bg-[#34c759]/15 text-[#34c759]'
+                          : selectedTx.status === 'CANCELLED'
+                          ? 'bg-black/[0.08] text-[#86868b]'
+                          : selectedTx.status === 'REJECTED'
+                          ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
+                          : 'bg-[#ff9500]/15 text-[#ff9500]'
+                      }`}
+                    >
+                      {selectedTx.status === 'PROCESSED' || selectedTx.status === 'HANDLED'
+                        ? 'Оплачен'
+                        : selectedTx.status === 'CANCELLED'
+                        ? 'Возврат оформлен'
+                        : selectedTx.status === 'REJECTED'
+                        ? 'Отклонён'
+                        : selectedTx.status}
+                    </span>
                   </div>
                 </div>
 
@@ -861,6 +945,45 @@ export const DashboardPage: React.FC = () => {
                   <span>Итого к оплате:</span>
                   <span className="text-base text-[#0071e3]">{Number(selectedTx.amount).toFixed(2)} ₽</span>
                 </div>
+
+                {/* Refund Messages and Button */}
+                {(selectedTx.status === 'PROCESSED' || selectedTx.status === 'HANDLED') && (
+                  <div className="space-y-2 pt-2 border-t border-black/[0.04]">
+                    {cancelErrorMsg && (
+                      <div className="p-2.5 rounded-xl bg-[#ff3b30]/10 text-[#ff3b30] text-[11px] flex items-center space-x-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{cancelErrorMsg}</span>
+                      </div>
+                    )}
+                    {cancelSuccessMsg && (
+                      <div className="p-2.5 rounded-xl bg-[#34c759]/10 text-[#34c759] text-[11px] flex items-center space-x-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{cancelSuccessMsg}</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleCancelTransaction(selectedTx.id)}
+                      disabled={cancellingTxId === selectedTx.id}
+                      className="w-full py-2.5 bg-[#ff3b30]/10 hover:bg-[#ff3b30]/15 active:scale-[0.98] text-[#ff3b30] font-medium rounded-full text-xs transition-all duration-200 flex items-center justify-center space-x-2"
+                    >
+                      {cancellingTxId === selectedTx.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Оформить возврат (отмена чека)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {selectedTx.status === 'CANCELLED' && (
+                  <div className="p-2.5 bg-black/[0.03] rounded-xl text-[10px] text-[#86868b] flex items-center space-x-1.5 border border-black/[0.04]">
+                    <RotateCcw className="w-3.5 h-3.5 flex-shrink-0 text-[#86868b]" />
+                    <span>Чек аннулирован. Кэшбэк отозван или баллы возвращены на счет.</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5">

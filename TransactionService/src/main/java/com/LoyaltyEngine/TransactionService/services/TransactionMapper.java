@@ -23,6 +23,7 @@ public class TransactionMapper {
         transaction.setId(domain.getId().value());
         transaction.setIdempotencyKey(domain.getIdempotencyKey().value());
         transaction.setStatus(domain.getStatus());
+        transaction.setUseCashbackBalance(domain.getUseCashbackBalance());
 
         transaction.setUserId(domain.getUserId().value());
         for (TransactionItemDomain item : domain.getItems()) {
