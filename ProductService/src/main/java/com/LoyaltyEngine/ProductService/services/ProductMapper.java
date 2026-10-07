@@ -13,6 +13,7 @@ public class ProductMapper {
                 entity.getUserId(),
                 entity.getTitle(),
                 entity.getDescription(),
+                entity.getPrice(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -25,6 +26,7 @@ public class ProductMapper {
         product.setUserId(domain.getUserId().value());
         product.setTitle(domain.getTitle());
         product.setDescription(domain.getDescription());
+        product.setPrice(domain.getPrice().value());
         product.setStatus(domain.getStatus());
         product.setCreatedAt(domain.getCreatedAt());
         product.setUpdatedAt(domain.getUpdatedAt());
@@ -38,6 +40,7 @@ public class ProductMapper {
                 domain.getUserId().value(),
                 domain.getTitle(),
                 domain.getDescription(),
+                domain.getPrice().value(),
                 domain.getStatus(),
                 domain.getCreatedAt()
         );

@@ -1,10 +1,12 @@
 package com.LoyaltyEngine.ProductService.models.domain;
 
+import com.LoyaltyEngine.ProductService.models.domain.valueObjects.Money;
 import com.LoyaltyEngine.ProductService.models.domain.valueObjects.ProductId;
 import com.LoyaltyEngine.ProductService.models.domain.valueObjects.UserId;
 import com.LoyaltyEngine.ProductService.models.domain.enums.ProductStatus;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,12 +18,14 @@ public class ProductDomain {
 
     private String title;
     private String description;
+    private Money price;
+
     private ProductStatus status;
 
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private ProductDomain(ProductId productId, UserId userId, String title, String description, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private ProductDomain(ProductId productId, UserId userId, String title, String description, Money price, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
         if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
         if (description == null || description.isBlank()) throw new IllegalArgumentException("Description is required");
 
@@ -33,22 +37,25 @@ public class ProductDomain {
         this.userId = userId;
         this.title = title;
         this.description = description;
+        this.price = price;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public static ProductDomain createProductDomain(UUID rawUserId, String title, String description) {
+    public static ProductDomain createProductDomain(UUID rawUserId, String title, String description, BigDecimal price) {
         ProductId productId = ProductId.generateProductId();
         UserId userId = new UserId(rawUserId);
+        Money money = new Money(price);
 
-        return new ProductDomain(productId, userId, title, description, ProductStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
+        return new ProductDomain(productId, userId, title, description, money, ProductStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
     }
 
-    public static ProductDomain restoreFromExisting(UUID rawProductId, UUID rawUserId, String title, String description, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public static ProductDomain restoreFromExisting(UUID rawProductId, UUID rawUserId, String title, String description, BigDecimal price, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
         ProductId productId = new ProductId(rawProductId);
         UserId userId = new UserId(rawUserId);
+        Money money = new Money(price);
 
-        return new ProductDomain(productId, userId, title, description, status, createdAt, updatedAt);
+        return new ProductDomain(productId, userId, title, description, money, status, createdAt, updatedAt);
     }
 
     public void updateTitle(String newTitle) {
@@ -65,6 +72,11 @@ public class ProductDomain {
 
         this.description = newDescription;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updatePrice(BigDecimal newPrice) {
+        if (this.price.value().compareTo(newPrice) == 0) throw new IllegalArgumentException("You cant enter the same price");
+        this.price = new Money(newPrice);
     }
 
     public void stopProduct() {

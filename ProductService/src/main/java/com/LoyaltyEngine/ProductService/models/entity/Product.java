@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -25,6 +26,8 @@ public class Product {
     private String title;
     @Column(nullable = false)
     private String description;
+    @Column(nullable = false)
+    private BigDecimal price;
 
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)

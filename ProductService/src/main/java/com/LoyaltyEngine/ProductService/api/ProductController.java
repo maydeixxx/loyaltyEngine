@@ -1,5 +1,6 @@
 package com.LoyaltyEngine.ProductService.api;
 
+import com.LoyaltyEngine.ProductService.models.dtos.ChangeProductStatusDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.CreateProductDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.ProductDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.UpdateProductDTO;
@@ -34,6 +35,20 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId()")
     public ResponseEntity<Void> updateProduct(@PathVariable UUID productId, @RequestBody @Valid UpdateProductDTO productDTO) {
         productService.updateProduct(productId, productDTO);
+        return ResponseEntity.status(204).build();
+    }
+
+    @PutMapping("/activate/{productId}")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId()")
+    public ResponseEntity<Void> activateProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO) {
+        productService.activate(productDTO);
+        return ResponseEntity.status(204).build();
+    }
+
+    @PutMapping("/stop/{productId}")
+    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId()")
+    public ResponseEntity<Void> stopProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO) {
+        productService.stopProduct(productDTO);
         return ResponseEntity.status(204).build();
     }
 

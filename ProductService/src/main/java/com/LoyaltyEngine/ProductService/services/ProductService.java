@@ -3,6 +3,7 @@ package com.LoyaltyEngine.ProductService.services;
 import com.LoyaltyEngine.ProductService.exceptions.ProductDeletingException;
 import com.LoyaltyEngine.ProductService.exceptions.ProductNotFoundException;
 import com.LoyaltyEngine.ProductService.models.domain.ProductDomain;
+import com.LoyaltyEngine.ProductService.models.dtos.ChangeProductStatusDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.CreateProductDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.UpdateProductDTO;
 import com.LoyaltyEngine.ProductService.models.entity.Product;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -27,8 +29,9 @@ public class ProductService {
             UUID userId = dto.userId();
             String title = dto.title();
             String description = dto.description();
+            BigDecimal price = dto.price();
 
-            ProductDomain productDomain = ProductDomain.createProductDomain(userId, title, description);
+            ProductDomain productDomain = ProductDomain.createProductDomain(userId, title, description, price);
             productRepository.save(productMapper.domainToEntity(productDomain));
         } catch (IllegalArgumentException e) {
             throw e;
@@ -59,10 +62,12 @@ public class ProductService {
         try {
             String description = dto.description();
             String title = dto.title();
+            BigDecimal price = dto.price();
             ProductDomain product = findProductById(productId);
 
             if (title != null && !title.isBlank()) product.updateTitle(title);
             if (description != null && !description.isBlank()) product.updateDescription(description);
+            if (price != null) product.updatePrice(price);
 
             productRepository.save(productMapper.domainToEntity(product));
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -70,6 +75,34 @@ public class ProductService {
         } catch (Exception e) {
             log.error("Error updating product [{}] : {}", productId, e.getMessage());
             throw new RuntimeException(e);
+        }
+    }
+
+    @Transactional
+    public void stopProduct(ChangeProductStatusDTO dto) {
+        try {
+            ProductDomain product = findProductById(dto.productId());
+            product.stopProduct();
+
+            productRepository.save(productMapper.domainToEntity(product));
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error stopping product [{}] : {}", dto.productId(), e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void activate(ChangeProductStatusDTO dto) {
+        try {
+            ProductDomain product = findProductById(dto.productId());
+            product.activateProduct();
+
+            productRepository.save(productMapper.domainToEntity(product));
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error activating product [{}] : {}", dto.productId(), e.getMessage());
         }
     }
 
