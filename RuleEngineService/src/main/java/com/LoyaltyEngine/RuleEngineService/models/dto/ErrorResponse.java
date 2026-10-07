@@ -1,16 +1,14 @@
 package com.LoyaltyEngine.RuleEngineService.models.dto;
 
-import lombok.Builder;
-import lombok.Data;
 
 import java.time.LocalDateTime;
 
-@Data
-@Builder
-public class ErrorResponse {
-    private String error;
-    private String message;
-    private int code;
-    private String path;
-    private LocalDateTime timestamp;
+
+public record ErrorResponse(
+        String error,
+        String message,
+        int code,
+        String path,
+        LocalDateTime timestamp
+) {
 }
