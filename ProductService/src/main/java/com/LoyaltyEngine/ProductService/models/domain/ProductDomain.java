@@ -18,6 +18,7 @@ public class ProductDomain {
 
     private String title;
     private String description;
+    private final String category;
     private Money price;
 
     private ProductStatus status;
@@ -25,9 +26,10 @@ public class ProductDomain {
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private ProductDomain(ProductId productId, UserId userId, String title, String description, Money price, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private ProductDomain(ProductId productId, UserId userId, String title, String description, String category, Money price, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
         if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
         if (description == null || description.isBlank()) throw new IllegalArgumentException("Description is required");
+        if (category == null || category.isBlank()) throw new IllegalArgumentException("Category is required");
 
         if (status == null) throw new IllegalArgumentException("Status cant be null");
 
@@ -37,25 +39,26 @@ public class ProductDomain {
         this.userId = userId;
         this.title = title;
         this.description = description;
+        this.category = category;
         this.price = price;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public static ProductDomain createProductDomain(UUID rawUserId, String title, String description, BigDecimal price) {
+    public static ProductDomain createProductDomain(UUID rawUserId, String title, String description, String category, BigDecimal price) {
         ProductId productId = ProductId.generateProductId();
         UserId userId = new UserId(rawUserId);
         Money money = new Money(price);
 
-        return new ProductDomain(productId, userId, title, description, money, ProductStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
+        return new ProductDomain(productId, userId, title, description, category, money, ProductStatus.ACTIVE, LocalDateTime.now(), LocalDateTime.now());
     }
 
-    public static ProductDomain restoreFromExisting(UUID rawProductId, UUID rawUserId, String title, String description, BigDecimal price, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public static ProductDomain restoreFromExisting(UUID rawProductId, UUID rawUserId, String title, String description, String category, BigDecimal price, ProductStatus status, LocalDateTime createdAt, LocalDateTime updatedAt) {
         ProductId productId = new ProductId(rawProductId);
         UserId userId = new UserId(rawUserId);
         Money money = new Money(price);
 
-        return new ProductDomain(productId, userId, title, description, money, status, createdAt, updatedAt);
+        return new ProductDomain(productId, userId, title, description, category, money, status, createdAt, updatedAt);
     }
 
     public void updateTitle(String newTitle) {

@@ -5,6 +5,7 @@ import com.LoyaltyEngine.ProductService.exceptions.ProductNotFoundException;
 import com.LoyaltyEngine.ProductService.models.domain.ProductDomain;
 import com.LoyaltyEngine.ProductService.models.dtos.ChangeProductStatusDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.CreateProductDTO;
+import com.LoyaltyEngine.ProductService.models.dtos.ProductDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.UpdateProductDTO;
 import com.LoyaltyEngine.ProductService.models.entity.Product;
 import com.LoyaltyEngine.ProductService.services.interfaces.ProductRepository;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,8 +32,9 @@ public class ProductService {
             String title = dto.title();
             String description = dto.description();
             BigDecimal price = dto.price();
+            String category = dto.category();
 
-            ProductDomain productDomain = ProductDomain.createProductDomain(userId, title, description, price);
+            ProductDomain productDomain = ProductDomain.createProductDomain(userId, title, description, category, price);
             productRepository.save(productMapper.domainToEntity(productDomain));
         } catch (IllegalArgumentException e) {
             throw e;
@@ -103,6 +106,17 @@ public class ProductService {
             throw e;
         } catch (Exception e) {
             log.error("Error activating product [{}] : {}", dto.productId(), e.getMessage());
+        }
+    }
+
+    public List<ProductDTO> findProductsByCategory(String category) {
+        try {
+            return productRepository.findProductsByCategory(category).stream()
+                    .map(productMapper::entityToDto)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Failed to find products by category [{}]: {}", category, e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 

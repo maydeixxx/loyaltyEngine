@@ -11,6 +11,7 @@ public record ProductDTO(
         UUID userId,
         String title,
         String description,
+        String category,
         BigDecimal price,
         ProductStatus status,
         LocalDateTime createdAt

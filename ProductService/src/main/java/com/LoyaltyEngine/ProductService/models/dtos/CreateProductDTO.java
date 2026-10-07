@@ -11,11 +11,17 @@ import java.util.UUID;
 public record CreateProductDTO(
         @NotNull(message = "User id cant be null")
         UUID userId,
+
         @NotBlank(message = "Title cant be empty or null")
         @Length(min = 10, max = 50, message = "Length of title is between 10 and 50")
         String title,
+
         @Length(min = 10, max = 200, message = "Description of title is between 10 and 50")
         String description,
+
+        @NotBlank(message = "Category cant be empty or null")
+        String category,
+
         @NotNull(message = "Price cant be null")
         @DecimalMin(value = "0.00", message = "Price cant be negative")
         BigDecimal price

@@ -13,6 +13,7 @@ public class ProductMapper {
                 entity.getUserId(),
                 entity.getTitle(),
                 entity.getDescription(),
+                entity.getCategory(),
                 entity.getPrice(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
@@ -26,6 +27,7 @@ public class ProductMapper {
         product.setUserId(domain.getUserId().value());
         product.setTitle(domain.getTitle());
         product.setDescription(domain.getDescription());
+        product.setCategory(domain.getCategory());
         product.setPrice(domain.getPrice().value());
         product.setStatus(domain.getStatus());
         product.setCreatedAt(domain.getCreatedAt());
@@ -40,9 +42,23 @@ public class ProductMapper {
                 domain.getUserId().value(),
                 domain.getTitle(),
                 domain.getDescription(),
+                domain.getCategory(),
                 domain.getPrice().value(),
                 domain.getStatus(),
                 domain.getCreatedAt()
+        );
+    }
+
+    public ProductDTO entityToDto(Product entity) {
+        return new ProductDTO(
+                entity.getProductId(),
+                entity.getUserId(),
+                entity.getTitle(),
+                entity.getDescription(),
+                entity.getCategory(),
+                entity.getPrice(),
+                entity.getStatus(),
+                entity.getCreatedAt()
         );
     }
 }

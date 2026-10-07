@@ -14,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -64,5 +65,10 @@ public class ProductController {
     public ResponseEntity<ProductDTO> getProduct(@PathVariable UUID productId) {
         ProductDTO product = productMapper.domainToDto(productService.findProductById(productId));
         return ResponseEntity.ok(product);
+    }
+
+    @GetMapping("/{category}")
+    public ResponseEntity<List<ProductDTO>> getProductsByCategory(@PathVariable String category) {
+        return ResponseEntity.ok(productService.findProductsByCategory(category));
     }
 }

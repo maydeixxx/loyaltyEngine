@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = @Index(name = "idx_product_category", columnList = "category"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,6 +26,8 @@ public class Product {
     private String title;
     @Column(nullable = false)
     private String description;
+    @Column(nullable = false)
+    private String category;
     @Column(nullable = false)
     private BigDecimal price;
 
