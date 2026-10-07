@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.ProductService.services;
 
 import com.LoyaltyEngine.ProductService.models.domain.ProductDomain;
+import com.LoyaltyEngine.ProductService.models.dtos.ProductDTO;
 import com.LoyaltyEngine.ProductService.models.entity.Product;
 import org.springframework.stereotype.Component;
 
@@ -29,5 +30,16 @@ public class ProductMapper {
         product.setUpdatedAt(domain.getUpdatedAt());
 
         return product;
+    }
+
+    public ProductDTO domainToDto(ProductDomain domain) {
+        return new ProductDTO(
+                domain.getProductId().value(),
+                domain.getUserId().value(),
+                domain.getTitle(),
+                domain.getDescription(),
+                domain.getStatus(),
+                domain.getCreatedAt()
+        );
     }
 }
