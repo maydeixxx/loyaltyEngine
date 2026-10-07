@@ -9,4 +9,4 @@ CREATE TABLE products(
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
-CREATE INDEX idx_product_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_product_category ON products(category);

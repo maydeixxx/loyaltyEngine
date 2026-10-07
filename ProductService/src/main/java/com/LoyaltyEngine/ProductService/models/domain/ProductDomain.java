@@ -33,7 +33,7 @@ public class ProductDomain {
 
         if (status == null) throw new IllegalArgumentException("Status cant be null");
 
-        if (createdAt == null || createdAt.isBefore(LocalDateTime.now())) throw new IllegalArgumentException("Entered wrong timestamp");
+        if (createdAt == null || createdAt.isAfter(LocalDateTime.now())) throw new IllegalArgumentException("Entered wrong timestamp");
 
         this.productId = productId;
         this.userId = userId;
@@ -41,6 +41,7 @@ public class ProductDomain {
         this.description = description;
         this.category = category;
         this.price = price;
+        this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }

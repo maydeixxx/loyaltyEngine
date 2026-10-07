@@ -92,6 +92,7 @@ public class ProductService {
             throw e;
         } catch (Exception e) {
             log.error("Error stopping product [{}] : {}", dto.productId(), e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
@@ -106,6 +107,7 @@ public class ProductService {
             throw e;
         } catch (Exception e) {
             log.error("Error activating product [{}] : {}", dto.productId(), e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 

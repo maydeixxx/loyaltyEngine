@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        ErrorResponseDTO response = buildErrorResponse("Product not found", errorMessage, 400, request);
+        ErrorResponseDTO response = buildErrorResponse("Validation error", errorMessage, 400, request);
         return ResponseEntity.status(response.code()).body(response);
     }
 
