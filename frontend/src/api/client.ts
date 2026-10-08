@@ -24,10 +24,12 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !error.config?.url?.includes('/users/auth') &&
-      !error.config?.url?.includes('/users/register')
+      !error.config?.url?.includes('/users/register') &&
+      !error.config?.url?.includes('/products/all')
     ) {
       localStorage.removeItem('loyalty_jwt');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      const publicPaths = ['/login', '/register', '/', '/catalog', '/products'];
+      if (!publicPaths.includes(window.location.pathname)) {
         window.location.href = '/login';
       }
     }

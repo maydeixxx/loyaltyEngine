@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, User, AlertCircle, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 
@@ -13,6 +13,11 @@ export const RegisterPage: React.FC = () => {
 
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const redirectMessage = location.state?.message;
+  const selectedProduct = location.state?.selectedProduct;
+  const from = location.state?.from || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +37,11 @@ export const RegisterPage: React.FC = () => {
         email: email.trim(),
         password,
       });
-      navigate('/');
+      if (selectedProduct) {
+        navigate('/checkout', { state: { selectedProduct } });
+      } else {
+        navigate(from);
+      }
     } catch (err: any) {
       console.error('Registration error:', err);
       const serverMsg =
@@ -62,6 +71,13 @@ export const RegisterPage: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="apple-card py-8 px-6 sm:px-10 border border-white/15 relative overflow-hidden">
+          {redirectMessage && !error && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-[#0071e3]/15 border border-[#0071e3]/30 flex items-start space-x-2.5 text-[#2997ff]">
+              <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#2997ff]" />
+              <div className="text-xs font-medium leading-relaxed">{redirectMessage}</div>
+            </div>
+          )}
+
           {error && (
             <div className="mb-5 p-3.5 rounded-2xl bg-[#ff453a]/15 border border-[#ff453a]/30 flex items-start space-x-2.5 text-[#ff453a]">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -169,6 +185,7 @@ export const RegisterPage: React.FC = () => {
               Уже есть аккаунт?{' '}
               <Link
                 to="/login"
+                state={location.state}
                 className="font-medium text-[#2997ff] hover:text-[#64d2ff] transition"
               >
                 Войти в систему
