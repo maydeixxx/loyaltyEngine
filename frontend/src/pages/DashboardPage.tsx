@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { walletApi } from '../api/wallet';
 import { transactionApi } from '../api/transactions';
-import type { WalletTransactionDTO, TransactionDTO, CreateTransactionItem } from '../types';
+import { productApi } from '../api/products';
+import type { WalletTransactionDTO, TransactionDTO, CreateTransactionItem, ProductDTO } from '../types';
 import {
   Wallet,
   Coins,
@@ -25,30 +26,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-interface CatalogProduct {
-  id: string;
-  name: string;
-  category: string;
-  defaultPrice: number;
-  badge: string;
-}
-
-const PRODUCT_CATALOG: CatalogProduct[] = [
-  { id: 'coffee', name: 'Капучино Grande', category: 'cafe', defaultPrice: 320, badge: '☕ Кафе' },
-  { id: 'croissant', name: 'Французский круассан', category: 'cafe', defaultPrice: 180, badge: '🥐 Кафе' },
-  { id: 'lunch', name: 'Бизнес-ланч', category: 'cafe', defaultPrice: 480, badge: '🥗 Кафе' },
-  { id: 'groceries_basket', name: 'Корзина в супермаркете', category: 'groceries', defaultPrice: 1850, badge: '🛒 Продукты' },
-  { id: 'milk', name: 'Фермерское молоко 1л', category: 'groceries', defaultPrice: 115, badge: '🥛 Продукты' },
-  { id: 'meat', name: 'Стейк из говядины', category: 'groceries', defaultPrice: 790, badge: '🥩 Продукты' },
-  { id: 'headphones', name: 'Беспроводные наушники ANC', category: 'electronics', defaultPrice: 4500, badge: '🎧 Электроника' },
-  { id: 'smartphone', name: 'Смартфон 128GB', category: 'electronics', defaultPrice: 24990, badge: '📱 Электроника' },
-  { id: 'powerbank', name: 'PowerBank 20000 mAh', category: 'electronics', defaultPrice: 1990, badge: '🔋 Электроника' },
-  { id: 'sneakers', name: 'Кроссовки', category: 'apparel', defaultPrice: 5900, badge: '👟 Одежда' },
-  { id: 'hoodie', name: 'Худи', category: 'apparel', defaultPrice: 3200, badge: '👕 Одежда' },
-  { id: 'fuel', name: 'Бак АИ-95 (40 л)', category: 'auto', defaultPrice: 2400, badge: '⛽ Авто' },
-  { id: 'pharmacy', name: 'Витамины и минералы', category: 'pharmacy', defaultPrice: 1150, badge: '💊 Аптека' },
-];
-
 export const DashboardPage: React.FC = () => {
   const { user, userId } = useAuth();
 
@@ -56,24 +33,24 @@ export const DashboardPage: React.FC = () => {
   const [balance, setBalance] = useState<number | null>(null);
   const [walletHistory, setWalletHistory] = useState<WalletTransactionDTO[]>([]);
   const [transactions, setTransactions] = useState<TransactionDTO[]>([]);
+  const [products, setProducts] = useState<ProductDTO[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingTxList, setLoadingTxList] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
 
   // Cart / Items State
-  const [cartItems, setCartItems] = useState<CreateTransactionItem[]>([
-    { name: 'Капучино Grande', category: 'cafe', price: 320 },
-  ]);
+  const [cartItems, setCartItems] = useState<CreateTransactionItem[]>([]);
 
   // Dropdown & Form State for adding items
-  const [selectedCatalogId, setSelectedCatalogId] = useState<string>('coffee');
-  const [itemName, setItemName] = useState('Капучино Grande');
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string>('custom');
+  const [itemName, setItemName] = useState('');
   const [itemCategory, setItemCategory] = useState('cafe');
-  const [itemPrice, setItemPrice] = useState('320');
+  const [itemPrice, setItemPrice] = useState('');
 
   // Transaction Amount State (customizable by user)
-  const [customAmount, setCustomAmount] = useState<string>('320.00');
+  const [customAmount, setCustomAmount] = useState<string>('0.00');
   const [isAutoAmount, setIsAutoAmount] = useState<boolean>(true);
 
   // Payment variables
@@ -134,7 +111,10 @@ export const DashboardPage: React.FC = () => {
     setLoadingTxList(true);
     try {
       const txList = await transactionApi.getUserTransactions(userId);
-      setTransactions(txList);
+      const sorted = [...txList].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setTransactions(sorted);
     } catch (err) {
       console.warn('Could not fetch transactions yet', err);
     } finally {
@@ -142,13 +122,26 @@ export const DashboardPage: React.FC = () => {
     }
   }, [userId]);
 
+  const fetchProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    try {
+      const list = await productApi.getAllProducts();
+      setProducts(list);
+    } catch (err) {
+      console.warn('Could not fetch products', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchProducts();
     if (userId) {
       fetchBalance();
       fetchHistory();
       fetchTransactions();
     }
-  }, [userId, fetchBalance, fetchHistory, fetchTransactions]);
+  }, [userId, fetchBalance, fetchHistory, fetchTransactions, fetchProducts]);
 
   // Copy User ID
   const copyUserId = () => {
@@ -164,16 +157,16 @@ export const DashboardPage: React.FC = () => {
     const catId = e.target.value;
     setSelectedCatalogId(catId);
 
-    if (catId === 'custom') {
+    if (catId === 'custom' || !catId) {
       setItemName('');
       setItemCategory('general');
       setItemPrice('');
     } else {
-      const found = PRODUCT_CATALOG.find((p) => p.id === catId);
+      const found = products.find((p) => p.productId === catId);
       if (found) {
-        setItemName(found.name);
+        setItemName(found.title);
         setItemCategory(found.category);
-        setItemPrice(found.defaultPrice.toString());
+        setItemPrice(found.price.toString());
       }
     }
   };
@@ -454,30 +447,18 @@ export const DashboardPage: React.FC = () => {
                 <select
                   value={selectedCatalogId}
                   onChange={handleCatalogChange}
-                  className="w-full px-3.5 py-2.5 bg-white border border-black/[0.08] rounded-xl text-xs font-medium text-[#1d1d1f] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 focus:outline-none transition-all duration-200"
+                  disabled={loadingProducts}
+                  className="w-full px-3.5 py-2.5 bg-white border border-black/[0.08] rounded-xl text-xs font-medium text-[#1d1d1f] focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/15 focus:outline-none transition-all duration-200 disabled:opacity-50"
                 >
-                  <optgroup label="☕ Кафе и рестораны">
-                    <option value="coffee">Капучино Grande (320 ₽)</option>
-                    <option value="croissant">Французский круассан (180 ₽)</option>
-                    <option value="lunch">Бизнес-ланч (480 ₽)</option>
-                  </optgroup>
-                  <optgroup label="🛒 Продукты">
-                    <option value="groceries_basket">Корзина супермаркета (1850 ₽)</option>
-                    <option value="milk">Фермерское молоко 1л (115 ₽)</option>
-                    <option value="meat">Стейк из говядины (790 ₽)</option>
-                  </optgroup>
-                  <optgroup label="🎧 Электроника">
-                    <option value="headphones">Наушники ANC (4500 ₽)</option>
-                    <option value="smartphone">Смартфон 128GB (24990 ₽)</option>
-                    <option value="powerbank">PowerBank 20000 mAh (1990 ₽)</option>
-                  </optgroup>
-                  <optgroup label="👟 Одежда и авто">
-                    <option value="sneakers">Кроссовки (5900 ₽)</option>
-                    <option value="hoodie">Худи (3200 ₽)</option>
-                    <option value="fuel">Бак АИ-95 (2400 ₽)</option>
-                    <option value="pharmacy">Витамины (1150 ₽)</option>
-                  </optgroup>
-                  <option value="custom">➕ Свой товар (ввести вручную)...</option>
+                  <option value="custom">➕ Ручной ввод позиции...</option>
+                  {loadingProducts && <option disabled>Загрузка каталога...</option>}
+                  {products
+                    .filter((p) => p.status === 'ACTIVE')
+                    .map((p) => (
+                      <option key={p.productId} value={p.productId}>
+                        [{p.category}] {p.title} — {p.price} ₽
+                      </option>
+                    ))}
                 </select>
               </div>
 

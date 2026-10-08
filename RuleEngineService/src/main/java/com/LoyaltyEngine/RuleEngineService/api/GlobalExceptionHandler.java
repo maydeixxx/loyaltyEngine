@@ -19,19 +19,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CashbackRuleNotFoundException.class)
     public ResponseEntity<ErrorResponse> handlerCashbackRuleNotFoundException(CashbackRuleNotFoundException e, WebRequest request) {
         ErrorResponse response = buildErrorResponse("Rule not found", e.getMessage(), 404, request);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(response.code()).body(response);
     }
 
     @ExceptionHandler(CashbackRuleValidationException.class)
     public ResponseEntity<ErrorResponse> handlerCashbackRuleValidationException(CashbackRuleValidationException e, WebRequest request) {
         ErrorResponse response = buildErrorResponse("Not valid data", e.getMessage(), 400, request);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(response.code()).body(response);
     }
 
     @ExceptionHandler(CashbackUpdateException.class)
     public ResponseEntity<ErrorResponse> handlerCashbackUpdateException(Exception e, WebRequest request) {
         ErrorResponse response = buildErrorResponse("Error updating cashback rule", e.getMessage(), 400, request);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(response.code()).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -43,28 +43,28 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
 
         ErrorResponse response = buildErrorResponse("Not valid data", errors, 400, request);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(response.code()).body(response);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
         ErrorResponse errorResponse = buildErrorResponse("Illegal argument", ex.getMessage(), 400, request);
-        return ResponseEntity.status(errorResponse.getCode()).body(errorResponse);
+        return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handlerException(Exception e, WebRequest request) {
         ErrorResponse response = buildErrorResponse("Server error", e.getMessage(), 500, request);
-        return ResponseEntity.status(response.getCode()).body(response);
+        return ResponseEntity.status(response.code()).body(response);
     }
 
     private ErrorResponse buildErrorResponse(String error, String message, int code, WebRequest request) {
-        return ErrorResponse.builder()
-                .error(error)
-                .message(message)
-                .code(code)
-                .path(request.getDescription(false).replace("uri=", ""))
-                .timestamp(LocalDateTime.now())
-                .build();
+        return new ErrorResponse(
+                error,
+                message,
+                code,
+                request.getDescription(false).replace("uri=", ""),
+                LocalDateTime.now()
+        );
     }
 }
