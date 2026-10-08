@@ -26,37 +26,41 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping()
-    @PreAuthorize("authentication.principal.userId == #productDTO.userId()")
+    @PreAuthorize("isAuthenticated() and authentication.principal.userId == #productDTO.userId()")
     public ResponseEntity<Void> createProduct(@RequestBody @Valid CreateProductDTO productDTO) {
         productService.createProduct(productDTO);
         return ResponseEntity.status(201).build();
     }
 
     @PutMapping("/{productId}")
-    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId()")
+    @PreAuthorize("isAuthenticated() and (hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId())")
     public ResponseEntity<Void> updateProduct(@PathVariable UUID productId, @RequestBody @Valid UpdateProductDTO productDTO) {
-        productService.updateProduct(productId, productDTO);
+        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        productService.updateProduct(productId, productDTO, userSecurity);
         return ResponseEntity.status(204).build();
     }
 
-    @PutMapping("/activate/{productId}")
-    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId()")
+    @PutMapping("/activate")
+    @PreAuthorize("isAuthenticated() and (hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId())")
     public ResponseEntity<Void> activateProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO) {
-        productService.activate(productDTO);
+        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        productService.activate(productDTO, userSecurity);
         return ResponseEntity.status(204).build();
     }
 
-    @PutMapping("/stop/{productId}")
-    @PreAuthorize("hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId()")
+    @PutMapping("/stop")
+    @PreAuthorize("isAuthenticated() and (hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId())")
     public ResponseEntity<Void> stopProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO) {
-        productService.stopProduct(productDTO);
+        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+        productService.stopProduct(productDTO, userSecurity);
         return ResponseEntity.status(204).build();
     }
 
     @DeleteMapping("/{productId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteProduct(@PathVariable UUID productId) {
         UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
-        productService.deleteProduct(productId, Objects.requireNonNull(userSecurity).userId());
+        productService.deleteProduct(productId, userSecurity);
         return ResponseEntity.status(204).build();
     }
 

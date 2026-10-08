@@ -44,6 +44,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
+        ErrorResponseDTO errorResponse = buildErrorResponse("Illegal state", ex.getMessage(), 409, request);
+        return ResponseEntity.status(errorResponse.code()).body(errorResponse);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handlerException(Exception e, WebRequest request) {
         ErrorResponseDTO response = buildErrorResponse("Server error", e.getMessage(), 500, request);

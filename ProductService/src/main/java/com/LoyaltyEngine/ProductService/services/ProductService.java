@@ -9,6 +9,7 @@ import com.LoyaltyEngine.ProductService.models.dtos.ProductDTO;
 import com.LoyaltyEngine.ProductService.models.dtos.UpdateProductDTO;
 import com.LoyaltyEngine.ProductService.models.entity.Product;
 import com.LoyaltyEngine.ProductService.services.interfaces.ProductRepository;
+import com.LoyaltyEngine.ProductService.services.security.UserSecurity;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,11 +46,12 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(UUID productId, UUID userId) {
+    public void deleteProduct(UUID productId, UserSecurity userSecurity) {
         try {
             Product product = productRepository.findProductByProductId(productId).orElseThrow(() -> new ProductNotFoundException("Product by id [%s] not found".formatted(productId)));
             UUID ownerUserId = product.getUserId();
-            if (!userId.equals(ownerUserId)) throw new ProductDeletingException("You are trying to delete not your product");
+            if (!userSecurity.userId().equals(ownerUserId) && !userSecurity.isAdmin())
+                throw new ProductDeletingException("You are trying to delete not your product");
 
             productRepository.delete(product);
         } catch (ProductDeletingException | ProductNotFoundException e) {
@@ -61,19 +63,20 @@ public class ProductService {
     }
 
     @Transactional
-    public void updateProduct(UUID productId, UpdateProductDTO dto) {
+    public void updateProduct(UUID productId, UpdateProductDTO dto, UserSecurity userSecurity) {
         try {
             String description = dto.description();
             String title = dto.title();
             BigDecimal price = dto.price();
             ProductDomain product = findProductById(productId);
+            if (!userSecurity.userId().equals(product.getUserId().value()) && !userSecurity.isAdmin()) throw new ProductDeletingException("You are trying to delete not your product");
 
             if (title != null && !title.isBlank()) product.updateTitle(title);
             if (description != null && !description.isBlank()) product.updateDescription(description);
             if (price != null) product.updatePrice(price);
 
             productRepository.save(productMapper.domainToEntity(product));
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | ProductDeletingException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error updating product [{}] : {}", productId, e.getMessage());
@@ -82,13 +85,16 @@ public class ProductService {
     }
 
     @Transactional
-    public void stopProduct(ChangeProductStatusDTO dto) {
+    public void stopProduct(ChangeProductStatusDTO dto, UserSecurity userSecurity) {
         try {
             ProductDomain product = findProductById(dto.productId());
+            if (!userSecurity.userId().equals(product.getUserId().value()) && !userSecurity.isAdmin())
+                throw new ProductDeletingException("You are trying to delete not your product");
+
             product.stopProduct();
 
             productRepository.save(productMapper.domainToEntity(product));
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | ProductDeletingException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error stopping product [{}] : {}", dto.productId(), e.getMessage());
@@ -97,13 +103,16 @@ public class ProductService {
     }
 
     @Transactional
-    public void activate(ChangeProductStatusDTO dto) {
+    public void activate(ChangeProductStatusDTO dto, UserSecurity userSecurity) {
         try {
             ProductDomain product = findProductById(dto.productId());
+            if (!userSecurity.userId().equals(product.getUserId().value()) && !userSecurity.isAdmin())
+                throw new ProductDeletingException("You are trying to delete not your product");
+
             product.activateProduct();
 
             productRepository.save(productMapper.domainToEntity(product));
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | ProductDeletingException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error activating product [{}] : {}", dto.productId(), e.getMessage());

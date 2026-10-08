@@ -63,23 +63,23 @@ public class ProductDomain {
     }
 
     public void updateTitle(String newTitle) {
-        if (this.status.equals(ProductStatus.STOPPED)) throw new IllegalStateException("You cant change title for stopped listing");
-        if (this.title.equals(newTitle)) throw new IllegalArgumentException("You cant enter the same title");
+        if (this.status.equals(ProductStatus.STOPPED)) return;
+        if (this.title.equals(newTitle)) return;
 
         this.title = newTitle;
         this.updatedAt = LocalDateTime.now();
     }
 
     public void updateDescription(String newDescription) {
-        if (this.status.equals(ProductStatus.STOPPED)) throw new IllegalStateException("You cant change description for stopped listing");
-        if (this.description.equals(newDescription)) throw new IllegalArgumentException("You cant enter the same description");
+        if (this.status.equals(ProductStatus.STOPPED)) return;
+        if (this.description.equals(newDescription)) return;
 
         this.description = newDescription;
         this.updatedAt = LocalDateTime.now();
     }
 
     public void updatePrice(BigDecimal newPrice) {
-        if (this.price.value().compareTo(newPrice) == 0) throw new IllegalArgumentException("You cant enter the same price");
+        if (this.price.value().compareTo(newPrice) == 0) return;
         this.price = new Money(newPrice);
     }
 

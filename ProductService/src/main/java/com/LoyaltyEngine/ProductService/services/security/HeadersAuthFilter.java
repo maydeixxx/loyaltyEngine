@@ -29,7 +29,7 @@ public class HeadersAuthFilter extends OncePerRequestFilter {
             List<SimpleGrantedAuthority> simpleGrantedAuthority = List.of(new SimpleGrantedAuthority(formattedRole));
 
             UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
-                    new UserSecurity(UUID.fromString(userId)),
+                    new UserSecurity(UUID.fromString(userId), userRole),
                     null,
                     simpleGrantedAuthority
             );
