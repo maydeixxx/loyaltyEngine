@@ -76,7 +76,7 @@ public class ProductService {
             if (price != null) product.updatePrice(price);
 
             productRepository.save(productMapper.domainToEntity(product));
-        } catch (IllegalArgumentException | IllegalStateException | ProductDeletingException e) {
+        } catch (IllegalArgumentException | IllegalStateException | ProductDeletingException | ProductNotFoundException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error updating product [{}] : {}", productId, e.getMessage());
@@ -94,7 +94,7 @@ public class ProductService {
             product.stopProduct();
 
             productRepository.save(productMapper.domainToEntity(product));
-        } catch (IllegalStateException | ProductDeletingException e) {
+        } catch (IllegalStateException | ProductDeletingException | ProductNotFoundException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error stopping product [{}] : {}", dto.productId(), e.getMessage());
@@ -112,7 +112,7 @@ public class ProductService {
             product.activateProduct();
 
             productRepository.save(productMapper.domainToEntity(product));
-        } catch (IllegalStateException | ProductDeletingException e) {
+        } catch (IllegalStateException | ProductDeletingException | ProductNotFoundException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error activating product [{}] : {}", dto.productId(), e.getMessage());
