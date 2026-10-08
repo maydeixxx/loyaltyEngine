@@ -98,3 +98,37 @@ export interface UpdateUserPayload {
   oldPassword?: string;
   newPassword?: string;
 }
+
+export type ProductStatus = 'ACTIVE' | 'STOPPED' | string;
+
+export interface ProductDTO {
+  productId: string;
+  userId: string;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  status: ProductStatus;
+  createdAt: string;
+}
+
+export interface CreateProductPayload {
+  userId: string;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+}
+
+export interface UpdateProductPayload {
+  userId: string;
+  title?: string;
+  description?: string;
+  price?: number;
+}
+
+export interface ChangeProductStatusPayload {
+  userId: string;
+  productId: string;
+}
+

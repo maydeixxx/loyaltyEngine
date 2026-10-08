@@ -71,6 +71,11 @@ public class ProductController {
         return ResponseEntity.ok(product);
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<ProductDTO>> getAllProducts() {
+        return ResponseEntity.ok(productService.findAllProducts());
+    }
+
     @GetMapping("/category/{category}")
     public ResponseEntity<List<ProductDTO>> getProductsByCategory(@PathVariable String category) {
         return ResponseEntity.ok(productService.findProductsByCategory(category));

@@ -448,6 +448,42 @@ class ProductServiceTest {
     }
 
     @Nested
+    @DisplayName("findAllProducts scenarios")
+    class FindAllProductsTests {
+
+        @Test
+        void findAllProducts_existingProducts_returnsProductDtoList() {
+            //given
+            Product entity = buildProductEntity(PRODUCT_ID, OWNER_USER_ID, ProductStatus.ACTIVE);
+            ProductDTO dto = new ProductDTO(PRODUCT_ID, OWNER_USER_ID, "Title", "Desc", "Electronics", new BigDecimal("99.99"), ProductStatus.ACTIVE, LocalDateTime.now().minusDays(1));
+
+            when(productRepository.findAll()).thenReturn(List.of(entity));
+            when(productMapper.entityToDto(entity)).thenReturn(dto);
+
+            //when
+            List<ProductDTO> result = productService.findAllProducts();
+
+            //then
+            assertAll(
+                    () -> assertEquals(1, result.size()),
+                    () -> assertEquals(PRODUCT_ID, result.getFirst().productId())
+            );
+        }
+
+        @Test
+        void findAllProducts_emptyList_returnsEmptyList() {
+            //given
+            when(productRepository.findAll()).thenReturn(List.of());
+
+            //when
+            List<ProductDTO> result = productService.findAllProducts();
+
+            //then
+            assertTrue(result.isEmpty());
+        }
+    }
+
+    @Nested
     @DisplayName("findProductsByCategory scenarios")
     class FindProductsByCategoryTests {
 

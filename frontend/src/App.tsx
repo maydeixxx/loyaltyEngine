@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
@@ -10,6 +10,30 @@ import { RulesPage } from './pages/RulesPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { AdminPage } from './pages/AdminPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { CatalogPage } from './pages/CatalogPage';
+
+const RootRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0d0d0f]">
+        <div className="flex flex-col items-center space-y-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#2997ff] border-t-transparent animate-spin" />
+          <span className="text-xs text-white/40 font-medium">Загрузка каталога...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Default page for unauthorized users is all products
+  if (!isAuthenticated) {
+    return <CatalogPage />;
+  }
+
+  // Authorized user landing
+  return <WalletPage />;
+};
 
 export const App: React.FC = () => {
   return (
@@ -19,19 +43,16 @@ export const App: React.FC = () => {
           <Navbar />
           <main className="flex-1">
             <Routes>
-              {/* Public Routes */}
+              {/* Public Storefront Routes */}
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/products" element={<CatalogPage />} />
+
+              {/* Public Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
-              {/* 3 Dedicated Core User Tabs */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <WalletPage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Dedicated Core User Tabs (Protected) */}
               <Route
                 path="/wallet"
                 element={

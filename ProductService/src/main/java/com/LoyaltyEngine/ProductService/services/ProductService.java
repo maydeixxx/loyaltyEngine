@@ -120,6 +120,17 @@ public class ProductService {
         }
     }
 
+    public List<ProductDTO> findAllProducts() {
+        try {
+            return productRepository.findAll().stream()
+                    .map(productMapper::entityToDto)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Failed to find all products: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
     public List<ProductDTO> findProductsByCategory(String category) {
         try {
             return productRepository.findProductsByCategory(category).stream()
