@@ -3,7 +3,6 @@ package com.LoyaltyEngine.WalletService.services;
 import com.LoyaltyEngine.WalletService.exceptions.WalletExistsException;
 import com.LoyaltyEngine.WalletService.models.events.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.WalletService.models.events.CancelTransactionEventModel;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -29,11 +28,7 @@ public class WalletConsumer {
         CalculatedCashbackEventModel model = record.value();
         UUID userId = model.userId();
 
-        try {
-            walletService.creditPoints(userId, transactionId, model.amount(), model.useCashback(), model.amountOfTransaction(), model.totalItemPrice());
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        walletService.creditPoints(userId, transactionId, model.amount(), model.useCashback(), model.amountOfTransaction(), model.totalItemPrice());
         ack.acknowledge();
     }
 
@@ -44,7 +39,7 @@ public class WalletConsumer {
     )
     public void handleUserCreatedEvent(ConsumerRecord<UUID, String> record) {
         if (record.value() == null || record.value().isBlank()) {
-            throw new NullPointerException("User id is null");
+            throw new IllegalArgumentException("User id is null");
         }
 
         UUID userId = UUID.fromString(record.value());
@@ -53,9 +48,6 @@ public class WalletConsumer {
             walletService.createWallet(userId);
         } catch (WalletExistsException e) {
             log.warn("Wallet for user [{}] already created", userId);
-        } catch (Exception e) {
-            log.error("Error handling user created event: {}", e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
@@ -66,11 +58,6 @@ public class WalletConsumer {
     )
     public void handleTransactionCancellation(ConsumerRecord<UUID, CancelTransactionEventModel> record) {
         UUID transactionId = record.key();
-
-        try {
-            walletService.cancelTransaction(transactionId, record.value());
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        walletService.cancelTransaction(transactionId, record.value());
     }
 }
