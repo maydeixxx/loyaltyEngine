@@ -2,7 +2,6 @@ package com.LoyaltyEngine.UserService.services;
 
 import com.LoyaltyEngine.UserService.exceptions.CreateUserException;
 import com.LoyaltyEngine.UserService.exceptions.UserNotFoundException;
-import com.LoyaltyEngine.UserService.exceptions.UserUpdateException;
 import com.LoyaltyEngine.UserService.models.entity.User;
 import com.LoyaltyEngine.UserService.models.domain.UserDomain;
 import com.LoyaltyEngine.UserService.models.dto.CreateUserDTO;
@@ -51,7 +50,8 @@ public class UserService {
         Timer.Sample sample = Timer.start(registry);
 
         try {
-            if (userRepository.findUserByEmail(userDTO.email()).isPresent()) throw new CreateUserException("User with email [%s] exists".formatted(userDTO.email()));
+            if (userRepository.findUserByEmail(userDTO.email()).isPresent())
+                throw new CreateUserException("User with email [%s] exists".formatted(userDTO.email()));
 
             UserDomain newUser = UserDomain.createUser(userDTO.email(), userDTO.firstName(), userDTO.lastName(), passwordEncoder.encode(userDTO.password()));
             userRepository.saveAndFlush(userMapper.domainToEntity(newUser));
@@ -71,22 +71,14 @@ public class UserService {
             registry.counter("loyalty.users.registered", "status", "successful").increment();
             span.tag("status", "SUCCESSFUL");
             return newUser;
-        } catch (CreateUserException e) {
-            registry.counter("loyalty.users.registered", "status", "failed").increment();
-            span.error(e);
-            span.tag("error.message", e.getMessage());
-            span.tag("status", "FAILED");
-
-            log.error(e.getMessage());
-            throw e;
         } catch (Exception e) {
             registry.counter("loyalty.users.registered", "status", "failed").increment();
             span.error(e);
             span.tag("error.message", e.getMessage());
             span.tag("status", "FAILED");
 
-            log.error("Unexpected error creating user: {}", e.getMessage());
-            throw new RuntimeException(e);
+            log.error("Unexpected error creating user: ", e);
+            throw e;
         } finally {
             span.end();
             sample.stop(registry.timer("loyalty.users.registration.timer"));
@@ -95,73 +87,39 @@ public class UserService {
 
     @Transactional
     public void deleteUser(String email) {
-        try {
-            User user = userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
-            userRepository.delete(user);
-        } catch (UserNotFoundException e) {
-            log.error(e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error deleting user: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        User user = userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email))));
+        userRepository.delete(user);
     }
 
     public UserDomain findUserById(UUID id) {
-        try {
-            return userMapper.entityToDomain(
-                    userRepository
-                            .findUserById(id)
-                            .orElseThrow(() -> new UserNotFoundException((String.format("User by id [%s] not found", id))))
-            );
-        } catch (UserNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting user by id: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        return userMapper.entityToDomain(
+                userRepository
+                        .findUserById(id)
+                        .orElseThrow(() -> new UserNotFoundException((String.format("User by id [%s] not found", id))))
+        );
     }
 
     public List<UserDomain> getAllUsers() {
-        try {
-            return userRepository.findAll()
-                    .stream()
-                    .map(userMapper::entityToDomain)
-                    .toList();
-        } catch (Exception e) {
-            log.error("Error getting all users: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        return userRepository.findAll()
+                .stream()
+                .map(userMapper::entityToDomain)
+                .toList();
     }
 
     @Transactional
     public void updateUser(String email, UpdateUserDTO updateUserDTO) {
-        try {
-            UserDomain user = userMapper.entityToDomain(userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
+        UserDomain user = userMapper.entityToDomain(userRepository.findUserByEmail(email).orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
 
-            if (updateUserDTO.firstName() != null && !updateUserDTO.firstName().isBlank()) user.updateFirstName(updateUserDTO.firstName());
-            if (updateUserDTO.lastName() != null && !updateUserDTO.lastName().isBlank()) user.updateLastName(updateUserDTO.lastName());
+        if (updateUserDTO.firstName() != null && !updateUserDTO.firstName().isBlank())
+            user.updateFirstName(updateUserDTO.firstName());
+        if (updateUserDTO.lastName() != null && !updateUserDTO.lastName().isBlank())
+            user.updateLastName(updateUserDTO.lastName());
 
-            userRepository.save(userMapper.domainToEntity(user));
-        } catch (UserNotFoundException | UserUpdateException | NullPointerException e) {
-            log.error(e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error updating user: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        userRepository.save(userMapper.domainToEntity(user));
     }
 
     public UserDomain findUserByEmail(String email) {
-        try {
-            return userMapper.entityToDomain(userRepository.findUserByEmail(email)
-                    .orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
-        } catch (UserNotFoundException e) {
-            log.error(e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error getting user by email: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        return userMapper.entityToDomain(userRepository.findUserByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException((String.format("User by email [%s] not found", email)))));
     }
 }
