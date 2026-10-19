@@ -16,25 +16,22 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(TransactionNotFoundException.class)
-    public ResponseEntity<?> transactionNotFoundHandler(TransactionNotFoundException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponseDTO> transactionNotFoundHandler(TransactionNotFoundException ex, WebRequest request) {
+        log.error("Transaction not found: ", ex);
         ErrorResponseDTO errorResponseDTO = buildResponse("Transaction not found", ex.getMessage(), 404, request);
         return ResponseEntity.status(404).body(errorResponseDTO);
     }
 
     @ExceptionHandler(TransactionCreatingException.class)
     public ResponseEntity<?> transactionCreatingHandler(TransactionCreatingException ex, WebRequest request) {
+        log.error("Error creating transaction: ", ex);
         ErrorResponseDTO errorResponseDTO = buildResponse("Error while creating transaction", ex.getMessage(), 400, request);
         return ResponseEntity.status(400).body(errorResponseDTO);
     }
 
-    @ExceptionHandler(TransactionRepositoryException.class)
-    public ResponseEntity<?> transactionRepositoryHandler(TransactionRepositoryException ex, WebRequest request) {
-        ErrorResponseDTO errorResponseDTO = buildResponse("Error in repository", ex.getMessage(), 500, request);
-        return ResponseEntity.status(500).body(errorResponseDTO);
-    }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> validationExceptionHandler(MethodArgumentNotValidException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponseDTO> validationExceptionHandler(MethodArgumentNotValidException ex, WebRequest request) {
+        log.error("Validation error: ", ex);
         String errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -46,14 +43,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> globalExceptionHandler(Exception ex, WebRequest request) {
+    public ResponseEntity<ErrorResponseDTO> globalExceptionHandler(Exception ex, WebRequest request) {
+        log.error("Global error: ", ex);
         ErrorResponseDTO errorResponseDTO = buildResponse("Global Error", ex.getMessage(), 500, request);
         return ResponseEntity.status(500).body(errorResponseDTO);
     }
 
-    @ExceptionHandler(TransactionMappingException.class)
-    public ResponseEntity<?> handleTransactionMappingException(TransactionMappingException ex, WebRequest request) {
-        ErrorResponseDTO errorResponseDTO = buildResponse("Error while mapping transaction", ex.getMessage(), 400, request);
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        log.error("Illegal argument: ", ex);
+        ErrorResponseDTO errorResponseDTO = buildResponse("Illegal argument", ex.getMessage(), 400, request);
         return ResponseEntity.status(400).body(errorResponseDTO);
     }
 
