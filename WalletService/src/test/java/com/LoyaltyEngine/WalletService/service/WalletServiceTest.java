@@ -127,7 +127,7 @@ class WalletServiceTest {
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
         when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId))
-                .thenReturn(Optional.of(new WalletTransaction()));
+                .thenReturn(List.of(new WalletTransaction()));
 
         //when
         walletService.creditPoints(userId, transactionId, new BigDecimal("10.00"), false, new BigDecimal("100.00"), new BigDecimal("100.00"));
@@ -178,7 +178,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(blockedWallet);
-        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(Optional.empty());
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of());
         when(mapper.writeValueAsString(any())).thenReturn("{}");
 
         //when
@@ -201,7 +201,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(Optional.empty());
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of());
         when(mapper.writeValueAsString(any())).thenReturn("{}");
 
         //when
@@ -223,7 +223,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(Optional.empty());
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of());
         when(mapper.writeValueAsString(any())).thenReturn("{}");
 
         //when: crediting 10.00 points
@@ -249,7 +249,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(Optional.empty());
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of());
         when(mapper.writeValueAsString(any())).thenReturn("{}");
 
         //when
@@ -274,7 +274,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(Optional.empty());
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of());
         when(walletRepository.save(any())).thenThrow(new RuntimeException("DB Connection down"));
 
         //when & then
@@ -375,7 +375,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of(origTransactionEntity));
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of(origTransactionEntity));
         when(walletTransactionMapper.entityToDomain(origTransactionEntity)).thenReturn(origTransactionDomain);
         when(walletTransactionMapper.domainToEntity(any(WalletTransactionDomain.class))).thenReturn(new WalletTransaction());
         when(walletMapper.domainToEntity(walletDomain)).thenReturn(walletEntity);
@@ -417,7 +417,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of(origTransactionEntity));
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of(origTransactionEntity));
         when(walletTransactionMapper.entityToDomain(origTransactionEntity)).thenReturn(origTransactionDomain);
         when(walletTransactionMapper.domainToEntity(any(WalletTransactionDomain.class))).thenReturn(new WalletTransaction());
         when(walletMapper.domainToEntity(walletDomain)).thenReturn(walletEntity);
@@ -507,7 +507,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of());
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of());
         when(mapper.writeValueAsString(any())).thenReturn("{}");
 
         //when
@@ -545,7 +545,7 @@ class WalletServiceTest {
 
         when(walletRepository.findWalletByUserId(userId)).thenReturn(Optional.of(walletEntity));
         when(walletMapper.entityToDomain(walletEntity)).thenReturn(walletDomain);
-        when(walletTransactionRepository.getWalletTransactionsByWalletId(walletId)).thenReturn(List.of(cancelTransactionEntity));
+        when(walletTransactionRepository.findWalletTransactionByTransactionId(transactionId)).thenReturn(List.of(cancelTransactionEntity));
         when(walletTransactionMapper.entityToDomain(cancelTransactionEntity)).thenReturn(cancelTransactionDomain);
 
         //when

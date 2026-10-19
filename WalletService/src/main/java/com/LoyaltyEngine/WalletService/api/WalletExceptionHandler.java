@@ -2,6 +2,7 @@ package com.LoyaltyEngine.WalletService.api;
 
 import com.LoyaltyEngine.WalletService.exceptions.*;
 import com.LoyaltyEngine.WalletService.models.dto.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,41 +12,48 @@ import org.springframework.web.context.request.WebRequest;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class WalletExceptionHandler {
 
     @ExceptionHandler(InvalidArgumentException.class)
     public ResponseEntity<ErrorResponse> handleInvalidArgumentException(InvalidArgumentException ex, WebRequest request) {
+        log.error("Invalid arguments: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(400, "Invalid argument", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        log.error("Illegal arguments: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(400, "Illegal argument", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(WalletBlockedException.class)
     public ResponseEntity<ErrorResponse> handleWalletBlockedException(WalletBlockedException ex, WebRequest request) {
+        log.error("Wallet blocked: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(409, "Wallet is blocked", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(WalletNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleWalletNotFoundException(WalletNotFoundException ex, WebRequest request) {
+        log.error("Wallet not found: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(404, "Wallet not found", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(WalletTransactionNotFound.class)
     public ResponseEntity<ErrorResponse> handleWalletTransactionNotFound(WalletTransactionNotFound ex, WebRequest request) {
+        log.error("Transaction not found: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(404, "Wallet transaction not found", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validationExceptionError(MethodArgumentNotValidException ex, WebRequest request) {
+        log.error("Validation error: ", ex);
         String errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -58,13 +66,22 @@ public class WalletExceptionHandler {
 
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientFundsException(InsufficientFundsException ex, WebRequest request) {
+        log.error("Error insufficient funds: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(400, "Insufficient funds", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
     @ExceptionHandler(WalletExistsException.class)
     public ResponseEntity<ErrorResponse> handleWalletExistsException(WalletExistsException ex, WebRequest request) {
+        log.error("Error wallet exists: ", ex);
         ErrorResponse errorResponse = buildErrorResponse(409, "Wallet exists", ex.getMessage(), request);
+        return ResponseEntity.status(errorResponse.code()).body(errorResponse);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleException(Exception ex, WebRequest request) {
+        log.error("Unexpected error: ", ex);
+        ErrorResponse errorResponse = buildErrorResponse(500, "Unexpected error", ex.getMessage(), request);
         return ResponseEntity.status(errorResponse.code()).body(errorResponse);
     }
 
