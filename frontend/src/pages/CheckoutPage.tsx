@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { walletApi } from '../api/wallet';
 import { transactionApi } from '../api/transactions';
-import type { TransactionDTO, CreateTransactionItem } from '../types';
+import { productApi } from '../api/products';
+import type { TransactionDTO, CreateTransactionItem, ProductDTO } from '../types';
 import {
   Plus,
   Trash2,
@@ -23,95 +25,41 @@ import {
   X,
   Coins,
   RotateCcw,
+  Package,
 } from 'lucide-react';
 
-interface CatalogProduct {
-  id: string;
-  name: string;
-  category: string;
-  defaultPrice: number;
-  icon: React.ReactNode;
-  badge: string;
-  glowColor: string;
-}
-
-const PRODUCT_CATALOG: CatalogProduct[] = [
-  {
-    id: 'coffee',
-    name: 'Капучино Grande',
-    category: 'cafe',
-    defaultPrice: 320,
-    icon: <Coffee className="w-4 h-4 text-[#ff9f0a]" />,
-    badge: 'Кафе',
-    glowColor: 'hover:border-[#ff9f0a]/50 hover:bg-[#ff9f0a]/10',
-  },
-  {
-    id: 'croissant',
-    name: 'Французский круассан',
-    category: 'cafe',
-    defaultPrice: 180,
-    icon: <Coffee className="w-4 h-4 text-[#ff9f0a]" />,
-    badge: 'Кафе',
-    glowColor: 'hover:border-[#ff9f0a]/50 hover:bg-[#ff9f0a]/10',
-  },
-  {
-    id: 'groceries_basket',
-    name: 'Корзина в супермаркете',
-    category: 'groceries',
-    defaultPrice: 1850,
-    icon: <ShoppingCart className="w-4 h-4 text-[#30d158]" />,
-    badge: 'Продукты',
-    glowColor: 'hover:border-[#30d158]/50 hover:bg-[#30d158]/10',
-  },
-  {
-    id: 'headphones',
-    name: 'Беспроводные наушники ANC',
-    category: 'electronics',
-    defaultPrice: 4500,
-    icon: <Headphones className="w-4 h-4 text-[#0a84ff]" />,
-    badge: 'Электроника',
-    glowColor: 'hover:border-[#0a84ff]/50 hover:bg-[#0a84ff]/10',
-  },
-  {
-    id: 'sneakers',
-    name: 'Кроссовки Sport Pro',
-    category: 'apparel',
-    defaultPrice: 5900,
-    icon: <Shirt className="w-4 h-4 text-[#bf5af2]" />,
-    badge: 'Одежда',
-    glowColor: 'hover:border-[#bf5af2]/50 hover:bg-[#bf5af2]/10',
-  },
-  {
-    id: 'fuel',
-    name: 'Бак АИ-95 (40 л)',
-    category: 'auto',
-    defaultPrice: 2400,
-    icon: <Fuel className="w-4 h-4 text-[#ff453a]" />,
-    badge: 'Авто',
-    glowColor: 'hover:border-[#ff453a]/50 hover:bg-[#ff453a]/10',
-  },
-];
+const getCategoryIcon = (category: string) => {
+  const cat = category.toLowerCase();
+  if (cat.includes('cafe') || cat.includes('кофе') || cat.includes('кафе')) return <Coffee className="w-4 h-4 text-[#ff9f0a]" />;
+  if (cat.includes('groc') || cat.includes('продукт')) return <ShoppingCart className="w-4 h-4 text-[#30d158]" />;
+  if (cat.includes('elect') || cat.includes('электрон')) return <Headphones className="w-4 h-4 text-[#0a84ff]" />;
+  if (cat.includes('apparel') || cat.includes('одежд')) return <Shirt className="w-4 h-4 text-[#bf5af2]" />;
+  if (cat.includes('auto') || cat.includes('авто')) return <Fuel className="w-4 h-4 text-[#ff453a]" />;
+  return <CreditCard className="w-4 h-4 text-[#2997ff]" />;
+};
 
 export const CheckoutPage: React.FC = () => {
   const { user, userId } = useAuth();
+  const location = useLocation();
 
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<TransactionDTO[]>([]);
   const [loadingTxList, setLoadingTxList] = useState(false);
 
-  // Cart state
-  const [cartItems, setCartItems] = useState<CreateTransactionItem[]>([
-    { name: 'Капучино Grande', category: 'cafe', price: 320 },
-  ]);
+  const [products, setProducts] = useState<ProductDTO[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Cart state (empty by default)
+  const [cartItems, setCartItems] = useState<CreateTransactionItem[]>([]);
 
   // Form input
-  const [selectedCatalogId, setSelectedCatalogId] = useState<string>('coffee');
-  const [itemName, setItemName] = useState('Капучино Grande');
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string>('');
+  const [itemName, setItemName] = useState('');
   const [itemCategory, setItemCategory] = useState('cafe');
-  const [itemPrice, setItemPrice] = useState('320');
+  const [itemPrice, setItemPrice] = useState('');
 
   // Custom amount & auto-calculation
-  const [customAmount, setCustomAmount] = useState<string>('320.00');
+  const [customAmount, setCustomAmount] = useState<string>('0.00');
   const [isAutoAmount, setIsAutoAmount] = useState<boolean>(true);
 
   // Payment flags & points redemption
@@ -128,6 +76,18 @@ export const CheckoutPage: React.FC = () => {
   const [cancelSuccessMsg, setCancelSuccessMsg] = useState<string | null>(null);
   const [cancelErrorMsg, setCancelErrorMsg] = useState<string | null>(null);
 
+  const fetchProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    try {
+      const list = await productApi.getAllProducts();
+      setProducts(list);
+    } catch (err) {
+      console.warn('Could not fetch products', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, []);
+
   const fetchBalance = useCallback(async () => {
     if (!userId) return;
     try {
@@ -143,7 +103,10 @@ export const CheckoutPage: React.FC = () => {
     setLoadingTxList(true);
     try {
       const list = await transactionApi.getUserTransactions(userId);
-      setTransactions(list);
+      const sorted = [...list].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setTransactions(sorted);
     } catch (err) {
       console.warn('Could not fetch transactions', err);
     } finally {
@@ -152,22 +115,47 @@ export const CheckoutPage: React.FC = () => {
   }, [userId]);
 
   useEffect(() => {
+    fetchProducts();
     if (userId) {
       fetchBalance();
       fetchTransactions();
     }
-  }, [userId, fetchBalance, fetchTransactions]);
+  }, [userId, fetchBalance, fetchTransactions, fetchProducts]);
+
+  // If navigated from catalog with a pre-selected product
+  useEffect(() => {
+    const stateProduct = location.state?.selectedProduct as ProductDTO | undefined;
+    if (stateProduct) {
+      setSelectedCatalogId(stateProduct.productId);
+      setItemName(stateProduct.title);
+      setItemCategory(stateProduct.category);
+      setItemPrice(stateProduct.price.toString());
+
+      setCartItems((prev) => {
+        if (prev.length === 0) {
+          const newItem: CreateTransactionItem = {
+            name: stateProduct.title,
+            category: stateProduct.category.toLowerCase(),
+            price: stateProduct.price,
+          };
+          setCustomAmount(stateProduct.price.toFixed(2));
+          return [newItem];
+        }
+        return prev;
+      });
+    }
+  }, [location.state]);
 
   const totalCartAmount = cartItems.reduce((acc, item) => acc + item.price, 0);
   const availableBalance = balance !== null ? balance : 0;
   // Backend requires cash amount >= 0.01
   const maxPossiblePoints = Math.max(0, Math.min(availableBalance, Number((totalCartAmount - 0.01).toFixed(2))));
 
-  const selectProduct = (p: CatalogProduct) => {
-    setSelectedCatalogId(p.id);
-    setItemName(p.name);
+  const selectProduct = (p: ProductDTO) => {
+    setSelectedCatalogId(p.productId);
+    setItemName(p.title);
     setItemCategory(p.category);
-    setItemPrice(p.defaultPrice.toString());
+    setItemPrice(p.price.toString());
   };
 
   const handleAddItemToCart = (e: React.FormEvent) => {
@@ -457,34 +445,60 @@ export const CheckoutPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Catalog Chips */}
+            {/* Quick Catalog Chips from ProductService */}
             <div>
-              <span className="block text-[11px] font-medium text-white/40 uppercase tracking-wider mb-2">
-                Быстрый выбор из каталога:
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {PRODUCT_CATALOG.map((p) => {
-                  const isSelected = selectedCatalogId === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => selectProduct(p)}
-                      className={`text-left p-2.5 rounded-xl border text-xs transition-all duration-200 flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-white/10 border-white/40 shadow-sm'
-                          : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-white/15'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        {p.icon}
-                        <span className="text-[10px] font-semibold text-white/70">{p.defaultPrice} ₽</span>
-                      </div>
-                      <span className="text-[11px] font-medium text-white/90 line-clamp-1">{p.name}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-medium text-white/40 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Package className="w-3.5 h-3.5 text-[#2997ff]" />
+                  <span>Каталог товаров (ProductService):</span>
+                </span>
+                {loadingProducts && (
+                  <span className="text-[10px] text-white/40 flex items-center space-x-1">
+                    <RefreshCw className="w-3 h-3 animate-spin text-[#2997ff]" />
+                    <span>Загрузка...</span>
+                  </span>
+                )}
               </div>
+
+              {products.filter((p) => p.status === 'ACTIVE').length === 0 ? (
+                <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <p className="text-xs text-white/60">
+                    {loadingProducts ? 'Загрузка списка товаров...' : 'В каталоге пока нет активных товаров.'}
+                  </p>
+                  <p className="text-[11px] text-white/40 mt-0.5">
+                    Вы можете ввести название и цену вручную ниже или добавить товары во вкладке управления.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {products
+                    .filter((p) => p.status === 'ACTIVE')
+                    .map((p) => {
+                      const isSelected = selectedCatalogId === p.productId;
+                      return (
+                        <button
+                          key={p.productId}
+                          type="button"
+                          onClick={() => selectProduct(p)}
+                          className={`text-left p-2.5 rounded-xl border text-xs transition-all duration-200 flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-white/10 border-white/40 shadow-sm'
+                              : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-white/15'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            {getCategoryIcon(p.category)}
+                            <span className="text-[10px] font-semibold text-white/80">{p.price} ₽</span>
+                          </div>
+                          <span className="text-[11px] font-medium text-white/90 line-clamp-1" title={p.title}>
+                            {p.title}
+                          </span>
+                          <span className="text-[9px] text-white/40 capitalize">{p.category}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
 
             {/* Custom Input Form */}
@@ -842,7 +856,9 @@ export const CheckoutPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
               <div className="flex items-center space-x-2">
                 <Receipt className="w-4 h-4 text-[#2997ff]" />
-                <h3 className="font-semibold text-white text-sm">История чеков</h3>
+                <h3 className="font-semibold text-white text-sm">
+                  История чеков ({transactions.length})
+                </h3>
               </div>
               <button
                 onClick={fetchTransactions}
@@ -853,11 +869,11 @@ export const CheckoutPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="divide-y divide-white/[0.04] max-h-60 overflow-y-auto">
+            <div className="divide-y divide-white/[0.04] max-h-72 overflow-y-auto">
               {transactions.length === 0 ? (
                 <div className="py-6 text-center text-xs text-white/40">Чеков пока нет</div>
               ) : (
-                transactions.slice(0, 5).map((tx) => (
+                transactions.map((tx) => (
                   <div
                     key={tx.id}
                     onClick={() => {
@@ -870,9 +886,21 @@ export const CheckoutPage: React.FC = () => {
                     <div className="min-w-0">
                       <div className="font-medium text-white truncate text-xs flex items-center space-x-1.5">
                         <span>Чек #{tx.id.substring(0, 8)}</span>
-                        {tx.status === 'CANCELLED' && (
+                        {tx.status === 'PROCESSED' || tx.status === 'HANDLED' ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#30d158]/20 text-[#30d158] font-medium border border-[#30d158]/30">
+                            Оплачен
+                          </span>
+                        ) : tx.status === 'CANCELLED' ? (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#ff453a]/20 text-[#ff453a] font-medium border border-[#ff453a]/30">
                             Возврат
+                          </span>
+                        ) : tx.status === 'REJECTED' || tx.status === 'FAILED' ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#ff453a]/20 text-[#ff453a] font-medium border border-[#ff453a]/30">
+                            Отклонён
+                          </span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-white/10 text-white/70 font-medium">
+                            {tx.status}
                           </span>
                         )}
                       </div>

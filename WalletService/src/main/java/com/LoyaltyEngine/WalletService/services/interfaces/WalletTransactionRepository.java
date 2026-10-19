@@ -10,5 +10,5 @@ import java.util.UUID;
 public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, UUID> {
     List<WalletTransaction> getWalletTransactionsByWalletId(UUID walletId);
 
-    Optional<WalletTransaction> findWalletTransactionByTransactionId(UUID transactionId);
+    List<WalletTransaction> findWalletTransactionByTransactionId(UUID transactionId);
 }

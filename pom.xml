@@ -12,6 +12,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<modules>
+		<module>ProductService</module>
 		<module>RuleEngineService</module>
 		<module>TransactionService</module>
 		<module>WalletService</module>

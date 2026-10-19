@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { rulesApi } from '../api/rules';
 import { usersApi } from '../api/users';
 import { walletApi } from '../api/wallet';
 import { transactionApi } from '../api/transactions';
-import type { CashbackRuleDTO, UserDTO, TransactionDTO } from '../types';
+import { productApi } from '../api/products';
+import type { CashbackRuleDTO, UserDTO, TransactionDTO, ProductDTO } from '../types';
 import {
   Shield,
   Percent,
@@ -19,11 +21,17 @@ import {
   Calendar,
   X,
   RotateCcw,
+  Package,
+  Edit2,
+  Power,
+  Tag,
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
+  const { userId } = useAuth();
+
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'rules' | 'users' | 'search'>('rules');
+  const [activeTab, setActiveTab] = useState<'rules' | 'products' | 'users' | 'search'>('rules');
 
   // Rules State
   const [rules, setRules] = useState<CashbackRuleDTO[]>([]);
@@ -34,6 +42,28 @@ export const AdminPage: React.FC = () => {
   const [ruleValidFrom, setRuleValidFrom] = useState('');
   const [ruleValidTo, setRuleValidTo] = useState('');
   const [ruleActionMsg, setRuleActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Products State
+  const [products, setProducts] = useState<ProductDTO[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [productActionMsg, setProductActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Add Product Modal State
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [productTitle, setProductTitle] = useState('');
+  const [productDescription, setProductDescription] = useState('');
+  const [productCategory, setProductCategory] = useState('cafe');
+  const [productPrice, setProductPrice] = useState('');
+
+  // Edit Product Modal State
+  const [editingProduct, setEditingProduct] = useState<ProductDTO | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+
+  // Product Filter State
+  const [productSearch, setProductSearch] = useState('');
+  const [productStatusFilter, setProductStatusFilter] = useState<'ALL' | 'ACTIVE' | 'STOPPED'>('ALL');
 
   // Users State
   const [users, setUsers] = useState<UserDTO[]>([]);
@@ -62,6 +92,19 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // Load Products
+  const loadProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const data = await productApi.getAllProducts();
+      setProducts(data);
+    } catch (e) {
+      console.error('Failed to load products', e);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
   // Load Users
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -78,6 +121,8 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'rules') {
       loadRules();
+    } else if (activeTab === 'products') {
+      loadProducts();
     } else if (activeTab === 'users') {
       loadUsers();
     }
@@ -127,6 +172,134 @@ export const AdminPage: React.FC = () => {
     } catch (e) {
       console.error('Failed to delete rule', e);
       setRuleActionMsg({ type: 'error', text: 'Не удалось удалить правило' });
+    }
+  };
+
+  // Handle Add Product
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProductActionMsg(null);
+
+    if (!userId) {
+      setProductActionMsg({ type: 'error', text: 'Ошибка: сессия пользователя не определена' });
+      return;
+    }
+
+    if (productTitle.trim().length < 10 || productTitle.trim().length > 50) {
+      setProductActionMsg({ type: 'error', text: 'Название товара должно содержать от 10 до 50 символов' });
+      return;
+    }
+
+    const desc = productDescription.trim() || 'Качественный товар из каталога программы лояльности';
+    if (desc.length < 10 || desc.length > 200) {
+      setProductActionMsg({ type: 'error', text: 'Описание должно содержать от 10 до 200 символов' });
+      return;
+    }
+
+    const price = parseFloat(productPrice);
+    if (isNaN(price) || price < 0) {
+      setProductActionMsg({ type: 'error', text: 'Укажите корректную неотрицательную цену' });
+      return;
+    }
+
+    try {
+      await productApi.createProduct({
+        userId,
+        title: productTitle.trim(),
+        description: desc,
+        category: productCategory.trim().toLowerCase(),
+        price,
+      });
+
+      setProductActionMsg({ type: 'success', text: `Товар "${productTitle}" успешно создан!` });
+      setShowAddProductModal(false);
+      setProductTitle('');
+      setProductDescription('');
+      setProductPrice('');
+      setProductCategory('cafe');
+      loadProducts();
+    } catch (err: any) {
+      console.error('Failed to create product', err);
+      const msg = err.response?.data?.message || err.response?.data || 'Ошибка при создании товара';
+      setProductActionMsg({ type: 'error', text: typeof msg === 'string' ? msg : 'Ошибка создания товара' });
+    }
+  };
+
+  // Handle Toggle Product Status (Activate / Stop)
+  const handleToggleProductStatus = async (product: ProductDTO) => {
+    if (!userId) return;
+    setProductActionMsg(null);
+    try {
+      if (product.status === 'ACTIVE') {
+        await productApi.stopProduct({ userId, productId: product.productId });
+        setProductActionMsg({ type: 'success', text: `Товар "${product.title}" переведен в статус "Остановлен"` });
+      } else {
+        await productApi.activateProduct({ userId, productId: product.productId });
+        setProductActionMsg({ type: 'success', text: `Товар "${product.title}" активирован` });
+      }
+      loadProducts();
+    } catch (err: any) {
+      console.error('Failed to change product status', err);
+      const msg = err.response?.data?.message || err.response?.data || 'Ошибка изменения статуса';
+      setProductActionMsg({ type: 'error', text: typeof msg === 'string' ? msg : 'Ошибка изменения статуса' });
+    }
+  };
+
+  // Handle Delete Product
+  const handleDeleteProduct = async (product: ProductDTO) => {
+    if (!confirm(`Удалить товар "${product.title}"?`)) return;
+    setProductActionMsg(null);
+    try {
+      await productApi.deleteProduct(product.productId);
+      setProductActionMsg({ type: 'success', text: `Товар "${product.title}" удален` });
+      loadProducts();
+    } catch (e: any) {
+      console.error('Failed to delete product', e);
+      const msg = e.response?.data?.message || e.response?.data || 'Не удалось удалить товар';
+      setProductActionMsg({ type: 'error', text: typeof msg === 'string' ? msg : 'Не удалось удалить товар' });
+    }
+  };
+
+  // Open Edit Product Modal
+  const openEditModal = (p: ProductDTO) => {
+    setEditingProduct(p);
+    setEditTitle(p.title);
+    setEditDescription(p.description || '');
+    setEditPrice(p.price.toString());
+  };
+
+  // Handle Update Product
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct || !userId) return;
+    setProductActionMsg(null);
+
+    if (editTitle.trim().length < 10 || editTitle.trim().length > 50) {
+      setProductActionMsg({ type: 'error', text: 'Название товара должно содержать от 10 до 50 символов' });
+      return;
+    }
+
+    const price = parseFloat(editPrice);
+    if (isNaN(price) || price < 0) {
+      setProductActionMsg({ type: 'error', text: 'Укажите корректную неотрицательную цену' });
+      return;
+    }
+
+    try {
+      await productApi.updateProduct(editingProduct.productId, {
+        userId,
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+        price,
+      });
+
+      setProductActionMsg({ type: 'success', text: `Товар "${editTitle}" успешно обновлен!` });
+      setEditingProduct(null);
+      loadProducts();
+    } catch (err: any) {
+      console.error('Failed to update product', err);
+      const msg = err.response?.data?.message || err.response?.data || 'Ошибка при обновлении товара';
+      setProductActionMsg({ type: 'error', text: typeof msg === 'string' ? msg : 'Не удалось обновить товар' });
     }
   };
 
@@ -234,6 +407,17 @@ export const AdminPage: React.FC = () => {
           >
             <Percent className="w-3.5 h-3.5" />
             <span>Правила</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-1.5 rounded-full text-xs transition-all duration-200 ${
+              activeTab === 'products'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Товары</span>
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -366,7 +550,230 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: USERS & WALLETS */}
+      {/* TAB: PRODUCTS */}
+      {activeTab === 'products' && (
+        <div className="apple-card p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-white/[0.06]">
+            <div>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight">Каталог товаров</h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-white/10 text-white/70">
+                  {products.length} {products.length === 1 ? 'позиция' : 'позиций'}
+                </span>
+              </div>
+              <p className="text-xs text-white/50 mt-0.5">
+                Управление ассортиментом ProductService, ценами и статусами доступности
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={loadProducts}
+                className="p-2 text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] rounded-full transition-all duration-200 border border-white/5"
+                title="Обновить список"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingProducts ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => setShowAddProductModal(true)}
+                className="px-5 py-2 bg-white hover:bg-white/90 text-black rounded-full text-xs font-semibold flex items-center space-x-1.5 transition-all duration-200 active:scale-[0.98] shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Добавить товар</span>
+              </button>
+            </div>
+          </div>
+
+          {productActionMsg && (
+            <div
+              className={`p-3.5 rounded-2xl text-xs flex items-center space-x-2.5 ${
+                productActionMsg.type === 'success'
+                  ? 'bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/30'
+                  : 'bg-[#ff453a]/15 text-[#ff453a] border border-[#ff453a]/30'
+              }`}
+            >
+              {productActionMsg.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-[#30d158] flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-[#ff453a] flex-shrink-0" />
+              )}
+              <span className="font-medium">{productActionMsg.text}</span>
+            </div>
+          )}
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Поиск по названию, категории или описанию..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                className="w-full pl-9 pr-3.5 py-2 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:border-[#2997ff] focus:outline-none transition"
+              />
+            </div>
+            <div className="flex bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
+              <button
+                onClick={() => setProductStatusFilter('ALL')}
+                className={`px-3 py-1 rounded-lg transition ${
+                  productStatusFilter === 'ALL'
+                    ? 'bg-white text-black font-semibold shadow-xs'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Все ({products.length})
+              </button>
+              <button
+                onClick={() => setProductStatusFilter('ACTIVE')}
+                className={`px-3 py-1 rounded-lg transition ${
+                  productStatusFilter === 'ACTIVE'
+                    ? 'bg-[#30d158]/20 text-[#30d158] font-semibold'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Активные
+              </button>
+              <button
+                onClick={() => setProductStatusFilter('STOPPED')}
+                className={`px-3 py-1 rounded-lg transition ${
+                  productStatusFilter === 'STOPPED'
+                    ? 'bg-[#ff9f0a]/20 text-[#ff9f0a] font-semibold'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Остановлены
+              </button>
+            </div>
+          </div>
+
+          {/* Products Table */}
+          <div className="border border-white/10 rounded-2xl overflow-x-auto bg-white/[0.02]">
+            <div className="min-w-[680px]">
+              <div className="bg-white/[0.03] px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-white/40 grid grid-cols-12 gap-2 border-b border-white/[0.06]">
+                <span className="col-span-5">Товар</span>
+                <span className="col-span-2">Категория</span>
+                <span className="col-span-2">Цена</span>
+                <span className="col-span-1">Статус</span>
+                <span className="col-span-2 text-right">Действия</span>
+              </div>
+
+              <div className="divide-y divide-white/[0.04]">
+                {products
+                  .filter((p) => {
+                    const matchesSearch =
+                      productSearch.trim() === '' ||
+                      p.title.toLowerCase().includes(productSearch.toLowerCase()) ||
+                      p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
+                      (p.description && p.description.toLowerCase().includes(productSearch.toLowerCase()));
+                    const matchesStatus =
+                      productStatusFilter === 'ALL' || p.status === productStatusFilter;
+                    return matchesSearch && matchesStatus;
+                  })
+                  .length === 0 ? (
+                  <div className="p-8 text-center text-xs text-white/40">
+                    {products.length === 0
+                      ? 'В каталоге пока нет товаров. Нажмите "+ Добавить товар", чтобы создать позицию.'
+                      : 'Товары не найдены по заданным фильтрам.'}
+                  </div>
+                ) : (
+                  products
+                    .filter((p) => {
+                      const matchesSearch =
+                        productSearch.trim() === '' ||
+                        p.title.toLowerCase().includes(productSearch.toLowerCase()) ||
+                        p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
+                        (p.description && p.description.toLowerCase().includes(productSearch.toLowerCase()));
+                      const matchesStatus =
+                        productStatusFilter === 'ALL' || p.status === productStatusFilter;
+                      return matchesSearch && matchesStatus;
+                    })
+                    .map((p) => {
+                      const isActive = p.status === 'ACTIVE';
+                      return (
+                        <div
+                          key={p.productId}
+                          className="px-4 py-3.5 text-xs grid grid-cols-12 gap-2 items-center hover:bg-white/[0.02] transition"
+                        >
+                          <div className="col-span-5 pr-2">
+                            <div className="font-medium text-white flex items-center space-x-2">
+                              <span>{p.title}</span>
+                            </div>
+                            {p.description && (
+                              <p className="text-[11px] text-white/40 truncate mt-0.5">
+                                {p.description}
+                              </p>
+                            )}
+                            <div className="text-[10px] text-white/30 font-mono mt-0.5 truncate">
+                              ID: {p.productId}
+                            </div>
+                          </div>
+
+                          <div className="col-span-2">
+                            <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-white/[0.05] border border-white/10 text-white/80">
+                              <Tag className="w-3 h-3 text-[#2997ff]" />
+                              <span>{p.category}</span>
+                            </span>
+                          </div>
+
+                          <div className="col-span-2">
+                            <span className="font-semibold text-white text-sm">
+                              {p.price.toLocaleString('ru-RU')} ₽
+                            </span>
+                          </div>
+
+                          <div className="col-span-1">
+                            {isActive ? (
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/30">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Активен</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#ff9f0a]/15 text-[#ff9f0a] border border-[#ff9f0a]/30">
+                                <Power className="w-3 h-3" />
+                                <span>Стоп</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="col-span-2 flex items-center justify-end space-x-1.5">
+                            <button
+                              onClick={() => handleToggleProductStatus(p)}
+                              className={`p-1.5 rounded-lg border text-xs transition active:scale-95 ${
+                                isActive
+                                  ? 'bg-[#ff9f0a]/10 hover:bg-[#ff9f0a]/20 text-[#ff9f0a] border-[#ff9f0a]/20'
+                                  : 'bg-[#30d158]/10 hover:bg-[#30d158]/20 text-[#30d158] border-[#30d158]/20'
+                              }`}
+                              title={isActive ? 'Остановить товар' : 'Активировать товар'}
+                            >
+                              <Power className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => openEditModal(p)}
+                              className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-white/70 hover:text-white transition active:scale-95"
+                              title="Редактировать товар"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(p)}
+                              className="p-1.5 rounded-lg border border-[#ff453a]/20 bg-[#ff453a]/10 hover:bg-[#ff453a]/20 text-[#ff453a] transition active:scale-95"
+                              title="Удалить товар"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: USERS & WALLETS */}
       {activeTab === 'users' && (
         <div className="apple-card p-6 sm:p-8 space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
@@ -674,6 +1081,198 @@ export const AdminPage: React.FC = () => {
                   className="w-1/2 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full text-xs transition shadow-sm"
                 >
                   Создать
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Create Product */}
+      {showAddProductModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xl flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="apple-card max-w-md w-full p-6 sm:p-7 border border-white/20 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center space-x-2">
+                <Package className="w-5 h-5 text-[#2997ff]" />
+                <h3 className="font-semibold text-white text-base">Новый товар</h3>
+              </div>
+              <button
+                onClick={() => setShowAddProductModal(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-xs transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                  Название товара (от 10 до 50 символов)
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={10}
+                  maxLength={50}
+                  placeholder="напр. Капучино Grande 400мл"
+                  value={productTitle}
+                  onChange={(e) => setProductTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:border-[#2997ff] focus:ring-1 focus:ring-[#2997ff]/40 focus:outline-none transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                    Категория
+                  </label>
+                  <select
+                    value={productCategory}
+                    onChange={(e) => setProductCategory(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-[#16161a] border border-white/10 rounded-xl text-xs text-white focus:border-[#2997ff] focus:outline-none transition"
+                  >
+                    <option value="cafe">cafe (Кофе / Рестораны)</option>
+                    <option value="groceries">groceries (Продукты)</option>
+                    <option value="electronics">electronics (Электроника)</option>
+                    <option value="apparel">apparel (Одежда)</option>
+                    <option value="auto">auto (Авто / АЗС)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                    Цена (₽)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      placeholder="350"
+                      value={productPrice}
+                      onChange={(e) => setProductPrice(e.target.value)}
+                      className="w-full pl-3.5 pr-8 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white focus:border-[#2997ff] focus:ring-1 focus:ring-[#2997ff]/40 focus:outline-none transition"
+                    />
+                    <span className="absolute right-3.5 top-2.5 text-white/40 font-medium">₽</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                  Описание товара (от 10 до 200 символов)
+                </label>
+                <textarea
+                  rows={3}
+                  minLength={10}
+                  maxLength={200}
+                  placeholder="напр. Свежесваренный авторский кофе из отборных зерен арабики"
+                  value={productDescription}
+                  onChange={(e) => setProductDescription(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:border-[#2997ff] focus:ring-1 focus:ring-[#2997ff]/40 focus:outline-none transition resize-none"
+                />
+              </div>
+
+              <div className="pt-3 flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddProductModal(false)}
+                  className="w-1/2 py-2.5 bg-white/10 hover:bg-white/15 text-white font-medium rounded-full text-xs transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full text-xs transition shadow-sm"
+                >
+                  Создать товар
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Product */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xl flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="apple-card max-w-md w-full p-6 sm:p-7 border border-white/20 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center space-x-2">
+                <Edit2 className="w-5 h-5 text-[#2997ff]" />
+                <h3 className="font-semibold text-white text-base">Редактирование товара</h3>
+              </div>
+              <button
+                onClick={() => setEditingProduct(null)}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-xs transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProduct} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                  Название товара (от 10 до 50 символов)
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={10}
+                  maxLength={50}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:border-[#2997ff] focus:ring-1 focus:ring-[#2997ff]/40 focus:outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                  Цена (₽)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    required
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    className="w-full pl-3.5 pr-8 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white focus:border-[#2997ff] focus:ring-1 focus:ring-[#2997ff]/40 focus:outline-none transition"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-white/40 font-medium">₽</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-medium text-white/50 mb-1.5">
+                  Описание товара (от 10 до 200 символов)
+                </label>
+                <textarea
+                  rows={3}
+                  minLength={10}
+                  maxLength={200}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:border-[#2997ff] focus:ring-1 focus:ring-[#2997ff]/40 focus:outline-none transition resize-none"
+                />
+              </div>
+
+              <div className="pt-3 flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="w-1/2 py-2.5 bg-white/10 hover:bg-white/15 text-white font-medium rounded-full text-xs transition"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2.5 bg-white hover:bg-white/90 text-black font-semibold rounded-full text-xs transition shadow-sm"
+                >
+                  Сохранить
                 </button>
               </div>
             </form>
