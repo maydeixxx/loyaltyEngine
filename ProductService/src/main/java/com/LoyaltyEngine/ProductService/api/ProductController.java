@@ -11,11 +11,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -32,34 +31,30 @@ public class ProductController {
         return ResponseEntity.status(201).build();
     }
 
-    @PutMapping("/{productId}")
+    @PatchMapping("/{productId}")
     @PreAuthorize("isAuthenticated() and (hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId())")
-    public ResponseEntity<Void> updateProduct(@PathVariable UUID productId, @RequestBody @Valid UpdateProductDTO productDTO) {
-        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+    public ResponseEntity<Void> updateProduct(@PathVariable UUID productId, @RequestBody @Valid UpdateProductDTO productDTO, @AuthenticationPrincipal UserSecurity userSecurity) {
         productService.updateProduct(productId, productDTO, userSecurity);
         return ResponseEntity.status(204).build();
     }
 
-    @PutMapping("/activate")
+    @PatchMapping("/activate")
     @PreAuthorize("isAuthenticated() and (hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId())")
-    public ResponseEntity<Void> activateProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO) {
-        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+    public ResponseEntity<Void> activateProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO, @AuthenticationPrincipal UserSecurity userSecurity) {
         productService.activate(productDTO, userSecurity);
         return ResponseEntity.status(204).build();
     }
 
-    @PutMapping("/stop")
+    @PatchMapping("/stop")
     @PreAuthorize("isAuthenticated() and (hasRole('ADMIN') or authentication.principal.userId == #productDTO.userId())")
-    public ResponseEntity<Void> stopProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO) {
-        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+    public ResponseEntity<Void> stopProduct(@RequestBody @Valid ChangeProductStatusDTO productDTO, @AuthenticationPrincipal UserSecurity userSecurity) {
         productService.stopProduct(productDTO, userSecurity);
         return ResponseEntity.status(204).build();
     }
 
     @DeleteMapping("/{productId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> deleteProduct(@PathVariable UUID productId) {
-        UserSecurity userSecurity = (UserSecurity) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
+    public ResponseEntity<Void> deleteProduct(@PathVariable UUID productId, @AuthenticationPrincipal UserSecurity userSecurity) {
         productService.deleteProduct(productId, userSecurity);
         return ResponseEntity.status(204).build();
     }

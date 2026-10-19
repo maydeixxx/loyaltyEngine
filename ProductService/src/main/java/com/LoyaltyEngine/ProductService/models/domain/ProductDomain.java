@@ -81,6 +81,7 @@ public class ProductDomain {
     public void updatePrice(BigDecimal newPrice) {
         if (this.price.value().compareTo(newPrice) == 0) return;
         this.price = new Money(newPrice);
+        this.updatedAt = LocalDateTime.now();
     }
 
     public void stopProduct() {

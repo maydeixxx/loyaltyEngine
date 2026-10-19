@@ -32,17 +32,17 @@ export const productApi = {
 
   // Обновить товар
   updateProduct: async (productId: string, payload: UpdateProductPayload): Promise<void> => {
-    await api.put(`/products/${productId}`, payload);
+    await api.patch(`/products/${productId}`, payload);
   },
 
   // Активировать товар
   activateProduct: async (payload: ChangeProductStatusPayload): Promise<void> => {
-    await api.put('/products/activate', payload);
+    await api.patch('/products/activate', payload);
   },
 
   // Остановить товар
   stopProduct: async (payload: ChangeProductStatusPayload): Promise<void> => {
-    await api.put('/products/stop', payload);
+    await api.patch('/products/stop', payload);
   },
 
   // Удалить товар

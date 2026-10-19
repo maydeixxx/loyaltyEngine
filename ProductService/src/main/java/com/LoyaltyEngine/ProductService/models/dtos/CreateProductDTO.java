@@ -16,7 +16,8 @@ public record CreateProductDTO(
         @Length(min = 10, max = 50, message = "Length of title is between 10 and 50")
         String title,
 
-        @Length(min = 10, max = 200, message = "Description of title is between 10 and 50")
+        @Length(min = 10, max = 200, message = "Description of title is between 10 and 200")
+        @NotBlank(message = "Description cant be empty or null")
         String description,
 
         @NotBlank(message = "Category cant be empty or null")
