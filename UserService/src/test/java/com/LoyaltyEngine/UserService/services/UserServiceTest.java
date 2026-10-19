@@ -478,17 +478,17 @@ class UserServiceTest {
     }
 
     @Test
-    void login_userNotFound_throwsUserNotFoundException() {
+    void login_userNotFound_throwsAuthenticationException() {
         //given
         AuthUserDto authDto = new AuthUserDto(TEST_EMAIL, RAW_PASSWORD);
         when(userRepository.findUserByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
 
         //when & then
-        UserNotFoundException exception = assertThrows(
-                UserNotFoundException.class,
+        AuthenticationException exception = assertThrows(
+                AuthenticationException.class,
                 () -> authService.login(authDto)
         );
-        assertEquals("User by email [%s] not found".formatted(TEST_EMAIL), exception.getMessage());
+        assertEquals("Incorrect email or password", exception.getMessage());
     }
 
     @Test
@@ -505,7 +505,7 @@ class UserServiceTest {
                 AuthenticationException.class,
                 () -> authService.login(authDto)
         );
-        assertEquals("Password is incorrect", exception.getMessage());
+        assertEquals("Incorrect email or password", exception.getMessage());
     }
 
     @Test

@@ -3,7 +3,6 @@ package com.LoyaltyEngine.TransactionService.services;
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.TransactionService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -61,27 +60,16 @@ public class OutboxEventPublisher {
     }
 
     public List<OutboxEvent> claimNewEvents() {
-        try {
-            return transactionTemplate.execute(_ -> {
-                List<OutboxEvent> events = outboxEventRepository.findNewOutBoxEvents();
-                events.forEach(event -> event.setStatus(OutboxStatus.PROCESSING));
-                outboxEventRepository.saveAllAndFlush(events);
-                return events;
-            });
-        } catch (Exception e) {
-            log.error("Error claiming new events: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        return transactionTemplate.execute(_ -> {
+            List<OutboxEvent> events = outboxEventRepository.findNewOutBoxEvents();
+            events.forEach(event -> event.setStatus(OutboxStatus.PROCESSING));
+            outboxEventRepository.saveAllAndFlush(events);
+            return events;
+        });
     }
 
     @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.HOURS)
-    @Transactional
     public void deleteOldEvents() {
-        try {
-            outboxEventRepository.deleteOldEvents();
-        } catch (Exception e) {
-            log.error("Error deleting old events: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        transactionTemplate.executeWithoutResult(_ -> outboxEventRepository.deleteOldEvents());
     }
 }

@@ -1,6 +1,7 @@
 package com.LoyaltyEngine.RuleEngineService;
 
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;
+import com.LoyaltyEngine.RuleEngineService.models.dto.CashbackRuleDTO;
 import com.LoyaltyEngine.RuleEngineService.models.dto.UpdateCashbackModelDTO;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.CalculatedCashbackEventModel;
 import com.LoyaltyEngine.RuleEngineService.models.eventModels.TransactionCreatedEvent;
@@ -69,9 +70,9 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         //then
-        List<CashbackRuleDomain> allRules = ruleEngineService.getAllRules();
+        List<CashbackRuleDTO> allRules = ruleEngineService.getAllRules();
         Assertions.assertEquals(1, allRules.size());
-        Assertions.assertEquals("electronics", allRules.getFirst().getCategory());
+        Assertions.assertEquals("electronics", allRules.getFirst().category());
     }
 
     @Test
@@ -85,9 +86,9 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         //when
-        UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
+        UUID id = ruleEngineService.getAllRules().getFirst().id();
         ruleEngineService.deleteCashbackRule(id);
-        List<CashbackRuleDomain> allRules = ruleEngineService.getAllRules();
+        List<CashbackRuleDTO> allRules = ruleEngineService.getAllRules();
 
         //then
         Assertions.assertEquals(0, allRules.size());
@@ -104,15 +105,15 @@ public class RuleEngineServiceTests {
         ruleEngineService.createCashbackRule(category, percentage, validFrom, validTo);
 
         UpdateCashbackModelDTO newRule = new UpdateCashbackModelDTO(new BigDecimal("15.0"), null);
-        UUID id = ruleEngineService.getAllRules().getFirst().getId().value();
+        UUID id = ruleEngineService.getAllRules().getFirst().id();
 
         //when
         ruleEngineService.updateCashbackRule(newRule, id);
-        CashbackRuleDomain updatedRule = ruleEngineService.getAllRules().getFirst();
+        CashbackRuleDTO updatedRule = ruleEngineService.getAllRules().getFirst();
 
         //then
-        Assertions.assertEquals("electronics", updatedRule.getCategory());
-        Assertions.assertEquals(new BigDecimal("15.0"), updatedRule.getPercentage());
+        Assertions.assertEquals("electronics", updatedRule.category());
+        Assertions.assertEquals(new BigDecimal("15.0"), updatedRule.percentage());
     }
 
     @Test

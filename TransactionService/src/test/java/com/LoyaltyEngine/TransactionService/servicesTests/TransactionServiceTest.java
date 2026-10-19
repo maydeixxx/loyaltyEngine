@@ -1,7 +1,6 @@
 package com.LoyaltyEngine.TransactionService.servicesTests;
 
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionItemDomain;
 import com.LoyaltyEngine.TransactionService.models.entity.OutboxEvent;
@@ -142,8 +141,8 @@ class TransactionServiceTest {
     }
 
     @Test
-    @DisplayName("createTransaction: throws TransactionRepositoryException on database error")
-    void createTransaction_repositoryThrowsDataException_throwsTransactionRepositoryException() {
+    @DisplayName("createTransaction: throws DataException on database error")
+    void createTransaction_repositoryThrowsDataException_throwsDataException() {
         //given
         Transaction entity = new Transaction();
         when(transactionRepository.getTransactionByIdempotencyKey(idempotencyKey)).thenReturn(Optional.empty());
@@ -151,7 +150,7 @@ class TransactionServiceTest {
         when(transactionRepository.save(entity)).thenThrow(new DataException("DB error", new SQLException("Connection lost")));
 
         //when & then
-        assertThrows(TransactionRepositoryException.class, () ->
+        assertThrows(DataException.class, () ->
                 transactionService.createTransaction(userId, new BigDecimal("150.00"), items, idempotencyKey, false)
         );
     }
