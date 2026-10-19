@@ -60,12 +60,10 @@ public class CalculateCashbackService {
                     cashback,
                     model.useCashbackBalance()
             );
-        } catch (IllegalStateException e) {
-            throw e;
         } catch (Exception e) {
             log.error("Unexpected error calculating cashback: {}", e.getMessage());
             registry.counter("calculate.cashback", "status", "failed").increment();
-            throw new RuntimeException(e);
+            throw e;
         } finally {
             span.end();
             timer.stop(registry.timer("calculate.cashback.duration"));

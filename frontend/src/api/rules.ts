@@ -16,7 +16,7 @@ export const rulesApi = {
 
   // Admin: Update rule
   async updateRule(id: string, payload: UpdateRulePayload): Promise<string> {
-    const response = await api.put<string>(`/rules/${id}`, payload);
+    const response = await api.patch<string>(`/rules/${id}`, payload);
     return response.data;
   },
 

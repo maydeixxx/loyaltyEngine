@@ -88,6 +88,7 @@ export interface CreateRulePayload {
 export interface UpdateRulePayload {
   category?: string;
   percentage?: number;
+  validTo?: string;
 }
 
 export interface UpdateUserPayload {
