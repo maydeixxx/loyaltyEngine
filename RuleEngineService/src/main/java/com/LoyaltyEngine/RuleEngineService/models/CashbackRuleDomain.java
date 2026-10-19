@@ -51,7 +51,13 @@ public class CashbackRuleDomain {
             throw new CashbackRuleValidationException("Valid to cant be before present time");
         }
         RuleId ruleId = RuleId.generateId();
-        return new CashbackRuleDomain(ruleId, category, percentage, validFrom, validTo);
+        CashbackRuleDomain rule = new CashbackRuleDomain(ruleId, category, percentage, validFrom, validTo);
+
+        if (validTo.isBefore(LocalDateTime.now())) {
+            throw new CashbackRuleValidationException("Valid to cant be before present time");
+        }
+
+        return rule;
     }
 
     public static CashbackRuleDomain restoreFromExisting(UUID ruleId, String category, BigDecimal percentage, LocalDateTime validFrom, LocalDateTime validTo) {

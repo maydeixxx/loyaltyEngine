@@ -2,6 +2,7 @@ package com.LoyaltyEngine.RuleEngineService.services;
 
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRule;
 import com.LoyaltyEngine.RuleEngineService.models.CashbackRuleDomain;
+import com.LoyaltyEngine.RuleEngineService.models.dto.CashbackRuleDTO;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,5 +26,15 @@ public class RuleEngineMapper {
         cashbackRule.setValidTo(domain.getValidTo());
 
         return cashbackRule;
+    }
+
+    public CashbackRuleDTO entityToDto(CashbackRule entity) {
+        return new CashbackRuleDTO(
+                entity.getId(),
+                entity.getCategory(),
+                entity.getPercentage(),
+                entity.getValidFrom(),
+                entity.getValidTo()
+        );
     }
 }

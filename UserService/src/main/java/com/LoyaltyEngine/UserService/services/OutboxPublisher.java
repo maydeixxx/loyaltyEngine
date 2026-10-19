@@ -3,7 +3,6 @@ package com.LoyaltyEngine.UserService.services;
 import com.LoyaltyEngine.UserService.models.entity.OutboxEvent;
 import com.LoyaltyEngine.UserService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.UserService.services.interfaces.OutboxEventRepository;
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -11,7 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -63,27 +61,20 @@ public class OutboxPublisher {
     }
 
     public List<OutboxEvent> claimEvents() {
-        try {
-            return transactionTemplate.execute(_ -> {
-                List<OutboxEvent> events = outboxEventRepository.findNewOutBoxEvents();
-                events.forEach(event -> event.setStatus(OutboxStatus.PROCESSING));
-                outboxEventRepository.saveAllAndFlush(events);
-                return events;
-            });
-        } catch (Exception e) {
-            log.error("Error claiming new events: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        return transactionTemplate.execute(_ -> {
+            List<OutboxEvent> events = outboxEventRepository.findNewOutBoxEvents();
+            events.forEach(event -> event.setStatus(OutboxStatus.PROCESSING));
+            outboxEventRepository.saveAllAndFlush(events);
+            return events;
+        });
     }
 
     @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.HOURS)
-    @Transactional
     public void deleteOldEvents() {
         try {
-            outboxEventRepository.deleteOldEvents();
+            transactionTemplate.executeWithoutResult(_ -> outboxEventRepository.deleteOldEvents());
         } catch (Exception e) {
             log.error("Error deleting old events: {}", e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 }

@@ -1,8 +1,6 @@
 package com.LoyaltyEngine.TransactionService.services;
 
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionMappingException;
 import com.LoyaltyEngine.TransactionService.exceptions.TransactionNotFoundException;
-import com.LoyaltyEngine.TransactionService.exceptions.TransactionRepositoryException;
 import com.LoyaltyEngine.TransactionService.models.enums.OutboxStatus;
 import com.LoyaltyEngine.TransactionService.models.enums.Status;
 import com.LoyaltyEngine.TransactionService.models.domain.TransactionDomain;
@@ -14,6 +12,7 @@ import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionCreate
 import com.LoyaltyEngine.TransactionService.models.eventModels.TransactionItemEvent;
 import com.LoyaltyEngine.TransactionService.services.interfaces.OutboxEventRepository;
 import com.LoyaltyEngine.TransactionService.services.interfaces.TransactionRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.f4b6a3.uuid.UuidCreator;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -22,11 +21,9 @@ import io.micrometer.tracing.ScopedSpan;
 import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.exception.DataException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -89,14 +86,12 @@ public class TransactionService {
         try {
             Transaction savedTransaction = transactionRepository.save(transactionMapper.transactionDomainToEntity(newTransaction));
 
-            OutboxEvent outboxEvent = OutboxEvent.builder()
-                    .id(UuidCreator.getTimeOrderedEpoch())
-                    .aggregateId(transactionId)
-                    .createdAt(LocalDateTime.now())
-                    .eventType(transactionCreatedTopic)
-                    .payload(mapper.writeValueAsString(transactionCreated))
-                    .status(OutboxStatus.NEW)
-                    .build();
+            OutboxEvent outboxEvent = buildOutboxEvent(
+                    transactionId,
+                    transactionCreatedTopic,
+                    transactionCreated
+            );
+
             outboxEventRepository.save(outboxEvent);
 
             log.info("Successfully saved new trans. - id: {}", transactionId);
@@ -105,20 +100,6 @@ public class TransactionService {
             registry.counter("transaction.create", "status", "successful").increment();
 
             return transactionMapper.transactionEntityToDomain(savedTransaction);
-        } catch (DataException e) {
-            span.error(e);
-            span.tag("error.message", e.getMessage());
-            span.tag("status", "FAILED");
-            registry.counter("transaction.create", "status", "failed").increment();
-
-            throw new TransactionRepositoryException("Error saving new trans.", e);
-        } catch (JacksonException e) {
-            span.error(e);
-            span.tag("error.message", e.getMessage());
-            span.tag("status", "FAILED");
-            registry.counter("transaction.create", "status", "failed").increment();
-
-            throw new TransactionMappingException("Error mapping", e);
         } catch (Exception e) {
             registry.counter("transaction.create", "status", "failed").increment();
             span.error(e);
@@ -126,7 +107,7 @@ public class TransactionService {
             span.tag("status", "FAILED");
 
             log.error("Unexpected error creating transaction: {}", e.getMessage());
-            throw new RuntimeException(e);
+            throw e;
         } finally {
             span.end();
             timer.stop(registry.timer("transaction.create.duration"));
@@ -134,95 +115,77 @@ public class TransactionService {
     }
 
     public TransactionDomain getTransactionById(UUID id) {
-        try {
-            return transactionMapper
-                    .transactionEntityToDomain(transactionRepository
-                            .getTransactionById(id)
-                            .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", id)))
-                    );
-        } catch (TransactionNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error getting transaction by id: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        return transactionMapper
+                .transactionEntityToDomain(transactionRepository
+                        .getTransactionById(id)
+                        .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", id)))
+                );
     }
 
     public Optional<TransactionDomain> getTransactionByIdempotencyKey(UUID idempotencyKey) {
-        try {
-            return transactionRepository.getTransactionByIdempotencyKey(idempotencyKey).map(transactionMapper::transactionEntityToDomain);
-        } catch (DataException e) {
-            throw new TransactionRepositoryException("Error finding trans. by idempotencyKey", e);
-        }
+        return transactionRepository.getTransactionByIdempotencyKey(idempotencyKey).map(transactionMapper::transactionEntityToDomain);
     }
 
     public List<TransactionDomain> getTransactionByUserId(UUID id) {
-        try {
-            List<Transaction> transactions = transactionRepository.getTransactionsByUserId(id);
-            return transactions
-                    .stream()
-                    .map(transactionMapper::transactionEntityToDomain)
-                    .toList();
-        } catch (DataException e) {
-            throw new TransactionRepositoryException("Error getting transaction", e);
-        } catch (Exception e) {
-            log.error("Unexpected error getting transaction by userId: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
+        List<Transaction> transactions = transactionRepository.getTransactionsByUserId(id);
+        return transactions
+                .stream()
+                .map(transactionMapper::transactionEntityToDomain)
+                .toList();
     }
 
     @Transactional
     public void updateStatus(Status status, UUID transactionId) {
-        try {
-            TransactionDomain transaction = transactionMapper.transactionEntityToDomain(transactionRepository
-                    .getTransactionById(transactionId)
-                    .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", transactionId))));
+        TransactionDomain transaction = transactionMapper.transactionEntityToDomain(transactionRepository
+                .getTransactionById(transactionId)
+                .orElseThrow(() -> new TransactionNotFoundException(String.format("Transaction %s not found", transactionId))));
 
-            switch (status) {
-                case PROCESSED -> transaction.completeTransaction();
-                case REJECTED -> transaction.rejectTransaction();
-                case CANCELLED -> transaction.cancelTransaction();
-            }
-
-            transactionRepository.save(transactionMapper.transactionDomainToEntity(transaction));
-        } catch (TransactionNotFoundException | IllegalArgumentException e) {
-            log.error(e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error updating status of transaction: {}", e.getMessage());
-            throw new RuntimeException(e);
+        switch (status) {
+            case PROCESSED -> transaction.completeTransaction();
+            case REJECTED -> transaction.rejectTransaction();
+            case CANCELLED -> transaction.cancelTransaction();
+            default -> throw new IllegalArgumentException("Unknown status");
         }
+
+        transactionRepository.save(transactionMapper.transactionDomainToEntity(transaction));
     }
 
     @Transactional
     public void cancelTransaction(UUID transactionId) {
+        TransactionDomain transaction = getTransactionById(transactionId);
+        if (transaction.getStatus().equals(Status.CANCELLED))
+            throw new IllegalArgumentException("Status already cancelled");
+        if (!transaction.getStatus().equals(Status.PROCESSED))
+            throw new IllegalArgumentException("Cant change status not from processed");
+
+        CancelTransactionEventModel eventModel = new CancelTransactionEventModel(
+                transactionId,
+                transaction.getUserId().value(),
+                transaction.getAmount().amount(),
+                transaction.getUseCashbackBalance()
+        );
+
+        OutboxEvent event = buildOutboxEvent(
+                transactionId,
+                cancelTransactionTopic,
+                eventModel
+        );
+        outboxEventRepository.save(event);
+    }
+
+    private OutboxEvent buildOutboxEvent(UUID aggregateId, String topic, Object payload) {
         try {
-            TransactionDomain transaction = getTransactionById(transactionId);
-            if (transaction.getStatus().equals(Status.CANCELLED)) throw new IllegalArgumentException("Status already cancelled");
-            if (!transaction.getStatus().equals(Status.PROCESSED)) throw new IllegalArgumentException("Cant change status not from processed");
-
-            CancelTransactionEventModel eventModel = new CancelTransactionEventModel(
-                    transactionId,
-                    transaction.getUserId().value(),
-                    transaction.getAmount().amount(),
-                    transaction.getUseCashbackBalance()
-            );
-
-            OutboxEvent event = OutboxEvent.builder()
+            return OutboxEvent.builder()
                     .id(UuidCreator.getTimeOrderedEpoch())
-                    .eventType(cancelTransactionTopic)
-                    .aggregateId(transactionId)
-                    .payload(mapper.writeValueAsString(eventModel))
+                    .aggregateId(aggregateId)
                     .createdAt(LocalDateTime.now())
-                    .retryCount(0)
+                    .eventType(topic)
+                    .payload(mapper.writeValueAsString(payload))
                     .status(OutboxStatus.NEW)
                     .build();
-            outboxEventRepository.save(event);
-        } catch (TransactionNotFoundException | IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error publishing event 'cancel transaction' for [{}]", transactionId);
-            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Cant serialize %s: ".formatted(payload), e);
         }
+
     }
 }
